@@ -2,63 +2,120 @@ usingnamespace @import("raylib");
 const std = @import("std");
 const warn = std.debug.warn;
 
+const grid_width: i32 = 10;
+const grid_height: i32 = 20;
+const grid_cell_size: i32 = 32;
+const margin: i32 = 20;
+const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2);
+const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
-const screenWidth = 650;
-const screenHeight = 800;
-const cellSide = (screenWidth -50) / 10;
-const numberRows = (screenHeight -25) / cellSide;
-const bottom = screenHeight -25 -cellSide;
+// const Square = struct {
+//     filled: bool,
+// };
 
-const Square = struct {
-    filled: bool,
+const Grid = struct {
+    grid: [grid_width * grid_height]bool,
+
+    pub fn init() Grid {
+        var grid: [grid_width * grid_height]bool = undefined;
+        for (grid) |*item, i| {
+            if (i == 52 or i == 0 or i == 10 or i == 51 or i == 199 or i == 190) {
+                item.* = true;
+            } else {
+                item.* = false;
+            }
+        }
+        return Grid{ .grid=grid };
+    }
+
+    pub fn get_active(self: Grid, x: usize, y: usize) bool {
+        const index: usize = y * @intCast(usize, grid_width) + x;
+        return self.grid[index];
+    }
+
+    pub fn set_active_state(self: *Grid, x: usize, y: usize, state: bool) void {
+        const index: usize = y * @intCast(usize, grid_width) + x;
+        self.grid[index] = state;
+    }
+
+    pub fn draw(self: Grid) void {
+        // draw grid
+        var y: usize = 0;
+        var upper_left_y: i32 = 0;
+        while (y < grid_height) {
+            var x: usize = 0;
+            var upper_left_x: i32 = margin;
+            while (x < grid_width) {
+
+                if (self.get_active(x, y)) {
+                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, DARKGRAY);
+                } else {
+                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, LIGHTGRAY);
+                    DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, WHITE);
+                }
+
+                upper_left_x += grid_cell_size; 
+                x += 1;
+            }
+            upper_left_y += grid_cell_size;
+            y += 1;
+        }
+    }
 };
 
 const FallingSquare = struct {
-    posY: c_int,
-    column: u8,
-    done: bool,
+    x: usize,
+    y: usize,
+    tick: usize = 0,
 
     pub fn update(self: *FallingSquare) void {
-        if (self.done) {
-            return;
+        if (self.tick == 30) {
+            self.y += 1;
+            self.tick = 0;
         }
-        self.posY += 2;
-        if (self.posY >= bottom) {
-            self.posY = bottom;
-            self.done = true;
-        }
+        self.tick += 1;
     }
-
     pub fn draw(self: FallingSquare) void {
-        const left: c_int = 25 + (cellSide*self.column);
-        DrawRectangle(left, self.posY, cellSide, cellSide, DARKGRAY);
+        DrawRectangle(
+            @intCast(i32, self.x) * grid_cell_size + margin,
+            @intCast(i32, self.y) * grid_cell_size,
+            grid_cell_size, grid_cell_size, GOLD);
     }
 };
+
+// pub fn main() anyerror!void {
+//     var x: usize = 1;
+//     var y: c_int = -2;
+//     const z = @intCast(c_int, x) + y;
+//     warn("z: {} type: {}", .{z, @typeName(@TypeOf(z))});
+// }
 
 pub fn main() anyerror!void
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    
 
-    var squaresMatrix:  [numberRows][10]*Square = undefined;
-    for (squaresMatrix) |*row| {
-        for (row.*) |*item| {
-            var c = Square{ .filled=false, };
-            item.* = &c;
-        }
-    }
+    var falling_square = FallingSquare{ .x=1, .y=0, };
 
-    var falling_square = FallingSquare{ .posY=0, .column=1, .done=false, };
+    var grid = Grid.init();
 
-    InitWindow(screenWidth, screenHeight, "Tetris");
+    // var grid: [grid_width * grid_height]bool = undefined;
+
+    // for (grid) |*item, i| {
+    //     if (i == 32 or i == 0 or i == 10 or i == 21 or i == 199 or i == 190) {
+    //         item.* = true;
+    //     } else {
+    //         item.* = false;
+    //     }
+    // }
+
+    InitWindow(screen_width, screen_height, "Tetris");
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    warn("screenHeight: {}\n", .{screenHeight});
-    
-    warn("numberRows: {}\n", .{numberRows});
+    // warn("screen_height: {}\n", .{screen_height});
+    warn("grid type: {}\n", .{@typeName(@TypeOf(grid))});
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -68,6 +125,10 @@ pub fn main() anyerror!void
         // TODO: Update your variables here
         //----------------------------------------------------------------------------------
         falling_square.update();
+        if (falling_square.y + 1 == grid_height or grid.get_active(falling_square.x, falling_square.y + 1)) {
+            grid.set_active_state(falling_square.x, falling_square.y, true);
+            falling_square.y = 0;
+        }
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -76,42 +137,12 @@ pub fn main() anyerror!void
             ClearBackground(WHITE);
 
             // draw border
-            DrawRectangle(0, 0, 25, screenHeight, LIGHTGRAY);  // left
-            DrawRectangle(screenWidth-25, 0, 25, screenHeight, LIGHTGRAY); // right
-            DrawRectangle(25, screenHeight-25, screenWidth-50, 25, LIGHTGRAY); // bottom
-           
-            // draw grid
-            var x: c_int = 0;
-            var y: c_int = 0;
-            for (squaresMatrix) |row| {
-                x = 0;
-                for (row) |item| {
-                    if (item.filled == true) {
-                        const left: c_int = 25 + (cellSide*x);
-                        const top: c_int = (screenHeight-25-cellSide) - (cellSide*y);
-                        DrawRectangle(left, top, cellSide, cellSide, DARKGRAY);
-                    } else {
-                        const left: c_int = 25 + (cellSide*x);
-                        const top: c_int = (screenHeight-25-cellSide) - (cellSide*y);
-                        DrawRectangle(left, top, cellSide, cellSide, LIGHTGRAY);
-                        DrawRectangle(left+1, top+1, cellSide-2, cellSide-2, WHITE);
-                    }
-                    x += 1;
-                }
-                y += 1;
-            }
+            DrawRectangle(0, 0, margin, screen_height, LIGHTGRAY);  // left
+            DrawRectangle(screen_width - margin, 0, margin, screen_height, LIGHTGRAY); // right
+            DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
 
-            // draw falling
+            grid.draw();
             falling_square.draw();
-
-            // var i: i32 = 0;
-            // var left: i32 = 25;
-            // const increment = (screenWidth-50) / 10;
-            // while (i < 10) {
-            //     i += 1;
-            //     DrawRectangle(left, screenHeight/2, 5, 10, DARKGRAY);
-            //     left += increment;
-            // }
 
         EndDrawing();
         //----------------------------------------------------------------------------------
