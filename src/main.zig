@@ -66,14 +66,9 @@ const Grid = struct {
 const FallingSquare = struct {
     x: usize,
     y: usize,
-    tick: usize = 0,
 
     pub fn update(self: *FallingSquare) void {
-        if (self.tick == 30) {
-            self.y += 1;
-            self.tick = 0;
-        }
-        self.tick += 1;
+        self.y += 1;
     }
     pub fn draw(self: FallingSquare) void {
         DrawRectangle(
@@ -98,6 +93,8 @@ pub fn main() anyerror!void
     var falling_square = FallingSquare{ .x=1, .y=0, };
 
     var grid = Grid.init();
+
+    var tick: usize = 0;
 
     // var grid: [grid_width * grid_height]bool = undefined;
 
@@ -124,11 +121,17 @@ pub fn main() anyerror!void
         //----------------------------------------------------------------------------------
         // TODO: Update your variables here
         //----------------------------------------------------------------------------------
-        falling_square.update();
-        if (falling_square.y + 1 == grid_height or grid.get_active(falling_square.x, falling_square.y + 1)) {
-            grid.set_active_state(falling_square.x, falling_square.y, true);
-            falling_square.y = 0;
+        if (tick == 30) {
+
+            falling_square.update();
+            if (falling_square.y + 1 == grid_height or grid.get_active(falling_square.x, falling_square.y + 1)) {
+                grid.set_active_state(falling_square.x, falling_square.y, true);
+                falling_square.y = 0;
+            }
+
+            tick = 0;
         }
+        tick += 1;
 
         // Draw
         //----------------------------------------------------------------------------------
