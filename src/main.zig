@@ -9,9 +9,6 @@ const margin: i32 = 20;
 const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2);
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
-// const Square = struct {
-//     filled: bool,
-// };
 
 const Grid = struct {
     grid: [grid_width * grid_height]bool,
@@ -39,7 +36,6 @@ const Grid = struct {
     }
 
     pub fn draw(self: Grid) void {
-        // draw grid
         var y: usize = 0;
         var upper_left_y: i32 = 0;
         while (y < grid_height) {
@@ -63,6 +59,7 @@ const Grid = struct {
     }
 };
 
+
 const FallingSquare = struct {
     x: usize,
     y: usize,
@@ -76,14 +73,38 @@ const FallingSquare = struct {
             @intCast(i32, self.y) * grid_cell_size,
             grid_cell_size, grid_cell_size, GOLD);
     }
+    pub fn move_right(self: *FallingSquare, grid: *Grid) void {
+        // todo detect collision in grid
+        warn("move right!\n", .{});
+        if (self.x < grid_width - 1) {
+            self.x += 1;
+            if (grid.get_active(self.x, self.y)) {
+                self.x -= 1;
+            }
+        }
+    }
+    pub fn move_left(self: *FallingSquare, grid: *Grid) void {
+        warn("move left!\n", .{});
+        if (self.x > 0) {
+            self.x -= 1;
+            if (grid.get_active(self.x, self.y)) {
+                self.x += 1;
+            }
+        }
+    }
+    pub fn move_down(self: *FallingSquare, grid: *Grid) void {
+        if (self.y + 1 == grid_height or grid.get_active(self.x, self.y + 1)) {
+            grid.set_active_state(self.x, self.y, true);
+            self.reset();
+        } else {
+            self.y += 1;
+        }
+    }
+    pub fn reset(self: *FallingSquare) void {
+        self.y = 0;
+    }
 };
 
-// pub fn main() anyerror!void {
-//     var x: usize = 1;
-//     var y: c_int = -2;
-//     const z = @intCast(c_int, x) + y;
-//     warn("z: {} type: {}", .{z, @typeName(@TypeOf(z))});
-// }
 
 pub fn main() anyerror!void
 {
@@ -91,44 +112,32 @@ pub fn main() anyerror!void
     //--------------------------------------------------------------------------------------
 
     var falling_square = FallingSquare{ .x=1, .y=0, };
-
     var grid = Grid.init();
-
     var tick: usize = 0;
-
-    // var grid: [grid_width * grid_height]bool = undefined;
-
-    // for (grid) |*item, i| {
-    //     if (i == 32 or i == 0 or i == 10 or i == 21 or i == 199 or i == 190) {
-    //         item.* = true;
-    //     } else {
-    //         item.* = false;
-    //     }
-    // }
 
     InitWindow(screen_width, screen_height, "Tetris");
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
-    // warn("screen_height: {}\n", .{screen_height});
-    warn("grid type: {}\n", .{@typeName(@TypeOf(grid))});
-
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         // Update
         //----------------------------------------------------------------------------------
-        // TODO: Update your variables here
-        //----------------------------------------------------------------------------------
+
+        if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
+            falling_square.move_right(&grid);
+        }
+        if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
+            falling_square.move_left(&grid);
+        }
+        if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
+            falling_square.move_down(&grid);
+        }
+
         if (tick == 30) {
-
-            falling_square.update();
-            if (falling_square.y + 1 == grid_height or grid.get_active(falling_square.x, falling_square.y + 1)) {
-                grid.set_active_state(falling_square.x, falling_square.y, true);
-                falling_square.y = 0;
-            }
-
+            falling_square.move_down(&grid);
             tick = 0;
         }
         tick += 1;
