@@ -1,0 +1,13 @@
+x draw squares in grid
+x draw a falling square
+x make square stop when it hits the bottom
+x make square stick to grid
+x add square to grid when it hits the bottom
+x make square change color when it is added to the grid
+x make square stop when it hits the top of another square in the grid
+x control falling square, lf and right
+x make square drop
+  draw projection of square (where it will drop to)
+  add 4x4cube
+  add 1x4
+  add flip
