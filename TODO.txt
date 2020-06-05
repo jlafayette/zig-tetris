@@ -1,7 +1,7 @@
 x control falling square, lf and right
 x make square drop
 x add 4x4cube
-  add 1x4
+x add 1x4
   add flip
   add X X
         X X

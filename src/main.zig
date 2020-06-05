@@ -72,19 +72,47 @@ const Pos = struct {
     y: i32,
 };
 
+const Type = enum {
+    Cube,
+    Long,
+};
+const Rotation = enum {
+    A, B, C, D
+};
 
 const Piece = struct {
     x: i32,
     y: i32,
     squares: [4]Pos,
+    t: Type,
+    r: Rotation,
 
-    pub fn init_4x4(x: i32) Piece {
+    pub fn init(t: Type) Piece {
         return Piece{
-            .x=x,
+            .x=4,
             .y=0,
-            .squares=[_]Pos{
-                Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 },
-                Pos{ .x=0, .y=1 }, Pos{ .x=1, .y=1 }
+            .squares=Piece.get_squares(t, Rotation.A),
+            .t=t,
+            .r=Rotation.A,
+        };
+    }
+
+    pub fn get_squares(t: Type, r: Rotation) [4]Pos {
+        return switch (t) {
+            Type.Cube => [_]Pos{
+                    Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 },
+                    Pos{ .x=0, .y=1 }, Pos{ .x=1, .y=1 }
+                },
+            Type.Long => switch (r) {
+                Rotation.A, Rotation.C => [_]Pos{
+                    Pos{ .x=-1, .y=0 }, Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 }, Pos{ .x=2, .y=0 }
+                },
+                Rotation.B, Rotation.D => [_]Pos{
+                    Pos{ .x=0, .y=-1 },
+                    Pos{ .x=0, .y=0 },
+                    Pos{ .x=0, .y=1 },
+                    Pos{ .x=0, .y=2 }
+                },
             },
         };
     }
@@ -153,6 +181,13 @@ const Piece = struct {
     }
     pub fn reset(self: *Piece) void {
         self.y = 0;
+        self.x = 4;
+        self.t = switch (self.t) {
+            Type.Cube => Type.Long,
+            Type.Long => Type.Cube,
+        };
+        self.r = Rotation.A;
+        self.squares = Piece.get_squares(self.t, self.r);
     }
 };
 
@@ -162,7 +197,7 @@ pub fn main() anyerror!void
     // Initialization
     //--------------------------------------------------------------------------------------
 
-    var piece = Piece.init_4x4(2);
+    var piece = Piece.init(Type.Cube);
     var grid = Grid.init();
     var tick: usize = 0;
 
@@ -198,12 +233,12 @@ pub fn main() anyerror!void
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
-            ClearBackground(WHITE);
+            ClearBackground(LIGHTGRAY);
 
-            // draw border
-            DrawRectangle(0, 0, margin, screen_height, LIGHTGRAY);  // left
-            DrawRectangle(screen_width - margin, 0, margin, screen_height, LIGHTGRAY); // right
-            DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
+            // // draw border
+            // DrawRectangle(0, 0, margin, screen_height, LIGHTGRAY);  // left
+            // DrawRectangle(screen_width - margin, 0, margin, screen_height, LIGHTGRAY); // right
+            // DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
 
             grid.draw();
             piece.draw();
