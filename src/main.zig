@@ -16,30 +16,37 @@ const Grid = struct {
     pub fn init() Grid {
         var grid: [grid_width * grid_height]bool = undefined;
         for (grid) |*item, i| {
-            if (i == 52 or i == 0 or i == 10 or i == 51 or i == 199 or i == 190) {
-                item.* = true;
-            } else {
-                item.* = false;
-            }
+            item.* = false;
         }
         return Grid{ .grid=grid };
     }
 
-    pub fn get_active(self: Grid, x: usize, y: usize) bool {
-        const index: usize = y * @intCast(usize, grid_width) + x;
+    pub fn get_active(self: Grid, x: i32, y: i32) bool {
+        if (x < 0) { return true; }
+        if (y < 0) { return false; }
+        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        if (index >= self.grid.len) {
+            return true;
+        }
         return self.grid[index];
     }
 
-    pub fn set_active_state(self: *Grid, x: usize, y: usize, state: bool) void {
-        const index: usize = y * @intCast(usize, grid_width) + x;
+    pub fn set_active_state(self: *Grid, x: i32, y: i32, state: bool) void {
+        if (x < 0 or y < 0) {
+            return;
+        }
+        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        if (index >= self.grid.len) {
+            return;
+        }
         self.grid[index] = state;
     }
 
     pub fn draw(self: Grid) void {
-        var y: usize = 0;
+        var y: i32 = 0;
         var upper_left_y: i32 = 0;
         while (y < grid_height) {
-            var x: usize = 0;
+            var x: i32 = 0;
             var upper_left_x: i32 = margin;
             while (x < grid_width) {
 
@@ -60,47 +67,91 @@ const Grid = struct {
 };
 
 
-const FallingSquare = struct {
-    x: usize,
-    y: usize,
+const Pos = struct {
+    x: i32,
+    y: i32,
+};
 
-    pub fn update(self: *FallingSquare) void {
+
+const Piece = struct {
+    x: i32,
+    y: i32,
+    squares: [4]Pos,
+
+    pub fn init_4x4(x: i32) Piece {
+        return Piece{
+            .x=x,
+            .y=0,
+            .squares=[_]Pos{
+                Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 },
+                Pos{ .x=0, .y=1 }, Pos{ .x=1, .y=1 }
+            },
+        };
+    }
+
+    pub fn update(self: *Piece) void {
         self.y += 1;
     }
-    pub fn draw(self: FallingSquare) void {
-        DrawRectangle(
-            @intCast(i32, self.x) * grid_cell_size + margin,
-            @intCast(i32, self.y) * grid_cell_size,
-            grid_cell_size, grid_cell_size, GOLD);
+    pub fn draw(self: Piece) void {
+        for (self.squares) |pos| {
+            DrawRectangle(
+                (self.x + pos.x) * grid_cell_size + margin,
+                (self.y + pos.y) * grid_cell_size,
+                grid_cell_size, grid_cell_size, GOLD);
+        }
     }
-    pub fn move_right(self: *FallingSquare, grid: *Grid) void {
-        // todo detect collision in grid
-        warn("move right!\n", .{});
-        if (self.x < grid_width - 1) {
+    pub fn move_right(self: *Piece, grid: *Grid) void {
+        const can_move = blk: {
+            for (self.squares) |pos| {
+                const x = self.x + pos.x + 1;
+                const y = self.y + pos.y;
+                if ((x >= grid_width) or grid.get_active(x, y)) {
+                    break :blk false;
+                }
+            }
+            break :blk true;
+        };
+        if (can_move) {
             self.x += 1;
-            if (grid.get_active(self.x, self.y)) {
-                self.x -= 1;
-            }
         }
     }
-    pub fn move_left(self: *FallingSquare, grid: *Grid) void {
-        warn("move left!\n", .{});
-        if (self.x > 0) {
+    pub fn move_left(self: *Piece, grid: *Grid) void {
+        const can_move = blk: {
+            for (self.squares) |pos| {
+                const x = self.x + pos.x - 1;
+                const y = self.y + pos.y;
+                if ((x < 0) or grid.get_active(x, y)) {
+                    break :blk false;
+                }
+            }
+            break :blk true;
+        };
+        if (can_move) {
             self.x -= 1;
-            if (grid.get_active(self.x, self.y)) {
-                self.x += 1;
+        }
+    }
+    pub fn move_down(self: *Piece, grid: *Grid) void {
+
+        const can_move = blk: {
+            for (self.squares) |pos| {
+                const x = self.x + pos.x;
+                const y = self.y + pos.y + 1;
+                if ((y >= grid_height) or grid.get_active(x, y)) {
+                    break :blk false;
+                }
             }
-        }
-    }
-    pub fn move_down(self: *FallingSquare, grid: *Grid) void {
-        if (self.y + 1 == grid_height or grid.get_active(self.x, self.y + 1)) {
-            grid.set_active_state(self.x, self.y, true);
-            self.reset();
-        } else {
+            break :blk true;
+        };
+        if (can_move) {
             self.y += 1;
+        } else {
+            for (self.squares) |pos| {
+                 grid.set_active_state(self.x + pos.x, self.y + pos.y, true);
+            }
+            self.reset();
         }
     }
-    pub fn reset(self: *FallingSquare) void {
+    pub fn reset(self: *Piece) void {
         self.y = 0;
     }
 };
@@ -111,11 +162,12 @@ pub fn main() anyerror!void
     // Initialization
     //--------------------------------------------------------------------------------------
 
-    var falling_square = FallingSquare{ .x=1, .y=0, };
+    var piece = Piece.init_4x4(2);
     var grid = Grid.init();
     var tick: usize = 0;
 
     InitWindow(screen_width, screen_height, "Tetris");
+    defer CloseWindow();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -127,17 +179,17 @@ pub fn main() anyerror!void
         //----------------------------------------------------------------------------------
 
         if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
-            falling_square.move_right(&grid);
+            piece.move_right(&grid);
         }
         if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
-            falling_square.move_left(&grid);
+            piece.move_left(&grid);
         }
         if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
-            falling_square.move_down(&grid);
+            piece.move_down(&grid);
         }
 
         if (tick == 30) {
-            falling_square.move_down(&grid);
+            piece.move_down(&grid);
             tick = 0;
         }
         tick += 1;
@@ -154,14 +206,9 @@ pub fn main() anyerror!void
             DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
 
             grid.draw();
-            falling_square.draw();
+            piece.draw();
 
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
-
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
 }
