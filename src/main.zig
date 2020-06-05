@@ -117,6 +117,33 @@ const Piece = struct {
         };
     }
 
+    pub fn rotate(self: *Piece, grid: *Grid) void {
+        const r = switch (self.r) {
+            Rotation.A => Rotation.B,
+            Rotation.B => Rotation.C,
+            Rotation.C => Rotation.D,
+            Rotation.D => Rotation.A,
+        };
+        const squares = Piece.get_squares(self.t, r);
+        if (self.check_collision(squares, grid)) {
+            return;
+        } else {
+            self.squares = squares;
+            self.r = r;
+        }
+    }
+
+    pub fn check_collision(self: *Piece, squares: [4]Pos, grid: *Grid) bool {
+        for (squares) |pos| {
+            const x = self.x + pos.x;
+            const y = self.y + pos.y;
+            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or grid.get_active(x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     pub fn update(self: *Piece) void {
         self.y += 1;
     }
@@ -221,6 +248,9 @@ pub fn main() anyerror!void
         }
         if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
             piece.move_down(&grid);
+        }
+        if (IsKeyPressed(KeyboardKey.KEY_UP)) {
+            piece.rotate(&grid);
         }
 
         if (tick == 30) {
