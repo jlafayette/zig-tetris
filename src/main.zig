@@ -81,6 +81,7 @@ const Type = enum {
     Long,
     Z,
     S,
+    T,
 };
 const Rotation = enum {
     A, B, C, D
@@ -140,6 +141,26 @@ const Piece = struct {
                     p(0,-1),
                     p(0, 0), p(1, 0),
                              p(1, 1)
+                },
+            },
+            Type.T => switch (r) {
+                Rotation.A, => [_]Pos{
+                              p(0,-1), 
+                    p(-1, 0), p(0, 0), p(1, 0),
+                },
+                Rotation.B => [_]Pos{
+                    p(0,-1),
+                    p(0, 0), p(1, 0),
+                    p(0, 1)
+                },
+                Rotation.C, => [_]Pos{
+                    p(-1, 0), p(0, 0), p(1, 0),
+                              p(0, 1), 
+                },
+                Rotation.D => [_]Pos{
+                              p(0,-1),
+                    p(-1, 0), p(0, 0),
+                              p(0, 1)
                 },
             },
         };
@@ -241,7 +262,8 @@ const Piece = struct {
             Type.Cube => Type.Long,
             Type.Long => Type.Z,
             Type.Z => Type.S,
-            Type.S => Type.Cube,
+            Type.S => Type.T,
+            Type.T => Type.Cube,
         };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
