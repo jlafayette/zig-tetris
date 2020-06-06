@@ -21,6 +21,70 @@ const Grid = struct {
         return Grid{ .grid=grid };
     }
 
+    fn row_is_full(self: Grid, y: i32) bool {
+        if (y >= self.grid.len or y < 0) {
+            warn("Row index out of bounds {}", .{y});
+            return false;
+        }
+        var x: i32 = 0;
+        return while (x < grid_width) : (x += 1) {
+            if (!self.get_active(x, y)) {
+                break false;
+            }
+        } else true;
+    }
+
+    fn copy_row(self: *Grid, y1: i32, y2: i32) void {
+        if (y1 == y2) {
+            warn("Invalid copy, {} must not equal {}\n", .{y1, y2});
+            return;
+        }
+        if (y2 < 0 or y1 >= grid_height or y2 >= grid_height) {
+            warn("Invalid copy, {} or {} is out of bounds\n", .{y1, y2});
+            return;
+        }
+        var x: i32 = 0;
+        while (x < grid_width) : (x += 1) {
+            if (y1 < 0) {
+                self.set_active_state(x, y2, false);
+            } else {
+                self.set_active_state(x, y2, self.get_active(x, y1));
+            }
+        }
+    }
+
+    fn copy_rows(self: *Grid, src_y: i32, dst_y: i32) void {
+        // Starting at dest row, copy everything above, but starting at dest
+        if (src_y >= dst_y) {
+            warn("{} must be less than {}\n", .{src_y, dst_y});
+            return;
+        }
+        var y1: i32 = src_y;
+        var y2: i32 = dst_y;
+        while (y2 > -1) {
+            self.copy_row(y1, y2);
+            y1 -= 1;
+            y2 -= 1;
+        }
+    }
+
+    pub fn update(self: *Grid) void {
+        // Remove full rows
+        var y: i32 = grid_height - 1;
+        var cp_y: i32 = y;
+        while (y > -1) {
+            if (self.row_is_full(y)) {
+                while (self.row_is_full(cp_y)) {
+                    cp_y -= 1;
+                }
+                self.copy_rows(cp_y, y);
+                cp_y = y;
+            }
+            y -= 1;
+            cp_y -= 1;
+        }
+    }
+
     pub fn get_active(self: Grid, x: i32, y: i32) bool {
         if (x < 0) { return true; }
         if (y < 0) { return false; }
@@ -376,6 +440,7 @@ pub fn main() anyerror!void
             piece.move_down(&grid) catch |err| switch (err) {
                 error.NoRoom => { gameover = true; }
             };
+            grid.update();
             tick = 0;
         }
         tick += 1;
