@@ -14,4 +14,5 @@ x add rotation
   add     X
       X X X
   reset when game over
+  make full rows disappear
   draw projection of square (where it will drop to)

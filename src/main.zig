@@ -72,9 +72,15 @@ const Pos = struct {
     y: i32,
 };
 
+fn p(x: i32, y: i32) Pos {
+    return Pos{ .x=x, .y=y };
+}
+
 const Type = enum {
     Cube,
     Long,
+    Z,
+    S,
 };
 const Rotation = enum {
     A, B, C, D
@@ -100,18 +106,40 @@ const Piece = struct {
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
             Type.Cube => [_]Pos{
-                    Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 },
-                    Pos{ .x=0, .y=1 }, Pos{ .x=1, .y=1 }
+                    p(0, 0), p(1, 0),
+                    p(0, 1), p(1, 1)
                 },
             Type.Long => switch (r) {
                 Rotation.A, Rotation.C => [_]Pos{
-                    Pos{ .x=-1, .y=0 }, Pos{ .x=0, .y=0 }, Pos{ .x=1, .y=0 }, Pos{ .x=2, .y=0 }
+                    p(-1, 0), p(0, 0), p(1, 0), p(2, 0)
                 },
                 Rotation.B, Rotation.D => [_]Pos{
-                    Pos{ .x=0, .y=-1 },
-                    Pos{ .x=0, .y=0 },
-                    Pos{ .x=0, .y=1 },
-                    Pos{ .x=0, .y=2 }
+                    p(0,-1),
+                    p(0, 0),
+                    p(0, 1),
+                    p(0, 2)
+                },
+            },
+            Type.Z => switch (r) {
+                Rotation.A, Rotation.C => [_]Pos{
+                    p(-1, 0), p(0, 0),
+                              p(0, 1), p(1, 1)
+                },
+                Rotation.B, Rotation.D => [_]Pos{
+                              p(0, -1),
+                    p(-1, 0), p(0,  0),
+                    p(-1, 1)
+                },
+            },
+            Type.S => switch (r) {
+                Rotation.A, Rotation.C => [_]Pos{
+                              p(0, 0), p(1, 0),
+                    p(-1, 1), p(0, 1)
+                },
+                Rotation.B, Rotation.D => [_]Pos{
+                    p(0,-1),
+                    p(0, 0), p(1, 0),
+                             p(1, 1)
                 },
             },
         };
@@ -211,7 +239,9 @@ const Piece = struct {
         self.x = 4;
         self.t = switch (self.t) {
             Type.Cube => Type.Long,
-            Type.Long => Type.Cube,
+            Type.Long => Type.Z,
+            Type.Z => Type.S,
+            Type.S => Type.Cube,
         };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
