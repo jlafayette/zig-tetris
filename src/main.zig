@@ -42,6 +42,12 @@ const Grid = struct {
         self.grid[index] = state;
     }
 
+    pub fn reset(self: *Grid) void {
+        for (self.grid) |*item, i| {
+            item.* = false;
+        }
+    }
+
     pub fn draw(self: Grid) void {
         var y: i32 = 0;
         var upper_left_y: i32 = 0;
@@ -87,6 +93,10 @@ const Type = enum {
 };
 const Rotation = enum {
     A, B, C, D
+};
+
+const GameOver = error {
+    NoRoom,
 };
 
 const Piece = struct {
@@ -276,7 +286,7 @@ const Piece = struct {
             self.x -= 1;
         }
     }
-    pub fn move_down(self: *Piece, grid: *Grid) void {
+    pub fn move_down(self: *Piece, grid: *Grid) !void {
 
         const can_move = blk: {
             for (self.squares) |pos| {
@@ -294,10 +304,10 @@ const Piece = struct {
             for (self.squares) |pos| {
                  grid.set_active_state(self.x + pos.x, self.y + pos.y, true);
             }
-            self.reset();
+            try self.reset(grid);
         }
     }
-    pub fn reset(self: *Piece) void {
+    pub fn reset(self: *Piece, grid: *Grid) !void {
         self.y = 0;
         self.x = 4;
         self.t = switch (self.t) {
@@ -311,6 +321,9 @@ const Piece = struct {
         };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
+        if (self.check_collision(self.squares, grid)) {
+            return error.NoRoom;
+        }
     }
 };
 
@@ -323,6 +336,7 @@ pub fn main() anyerror!void
     var piece = Piece.init(Type.Cube);
     var grid = Grid.init();
     var tick: usize = 0;
+    var gameover: bool = false;
 
     InitWindow(screen_width, screen_height, "Tetris");
     defer CloseWindow();
@@ -336,6 +350,13 @@ pub fn main() anyerror!void
         // Update
         //----------------------------------------------------------------------------------
 
+        if (gameover) {
+            grid.reset();
+            piece.reset(&grid) catch |err| {};
+            tick = 0;
+            gameover = false;
+        }
+
         if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
             piece.move_right(&grid);
         }
@@ -343,14 +364,18 @@ pub fn main() anyerror!void
             piece.move_left(&grid);
         }
         if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
-            piece.move_down(&grid);
+            piece.move_down(&grid) catch |err| switch (err) {
+                error.NoRoom => { gameover = true; }
+            };
         }
         if (IsKeyPressed(KeyboardKey.KEY_UP)) {
             piece.rotate(&grid);
         }
 
         if (tick == 30) {
-            piece.move_down(&grid);
+            piece.move_down(&grid) catch |err| switch (err) {
+                error.NoRoom => { gameover = true; }
+            };
             tick = 0;
         }
         tick += 1;
