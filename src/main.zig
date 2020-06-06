@@ -82,6 +82,8 @@ const Type = enum {
     Z,
     S,
     T,
+    L,
+    J,
 };
 const Rotation = enum {
     A, B, C, D
@@ -161,6 +163,46 @@ const Piece = struct {
                               p(0,-1),
                     p(-1, 0), p(0, 0),
                               p(0, 1)
+                },
+            },
+            Type.L => switch (r) {
+                Rotation.A => [_]Pos{
+                    p(0,-1),
+                    p(0, 0),
+                    p(0, 1), p(1, 1),
+                },
+                Rotation.B => [_]Pos{
+                    p(-1, 0), p(0, 0), p(1, 0),
+                    p(-1, 1),
+                },
+                Rotation.C => [_]Pos{
+                    p(-1,-1), p(0,-1),
+                              p(0, 0),
+                              p(0, 1),
+                },
+                Rotation.D => [_]Pos{
+                                       p(1,-1),
+                    p(-1, 0), p(0, 0), p(1, 0),
+                },
+            },
+            Type.J => switch (r) {
+                Rotation.A => [_]Pos{
+                              p(0,-1),
+                              p(0, 0),
+                    p(-1, 1), p(0, 1),
+                },
+                Rotation.B => [_]Pos{
+                    p(-1,-1),
+                    p(-1, 0), p(0, 0), p(1, 0),
+                },
+                Rotation.C => [_]Pos{
+                    p(0,-1), p(1,-1),
+                    p(0, 0),
+                    p(0, 1),
+                },
+                Rotation.D => [_]Pos{
+                    p(-1, 0), p(0, 0), p(1, 0),
+                                       p(1, 1)
                 },
             },
         };
@@ -263,7 +305,9 @@ const Piece = struct {
             Type.Long => Type.Z,
             Type.Z => Type.S,
             Type.S => Type.T,
-            Type.T => Type.Cube,
+            Type.T => Type.L,
+            Type.L => Type.J,
+            Type.J => Type.Cube,
         };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
