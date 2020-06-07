@@ -1,11 +1,13 @@
-const Builder = @import("std").build.Builder;
+const std = @import("std");
+const Builder = std.build.Builder;
 
 pub fn build(b: *Builder) void {
     const mode = b.standardReleaseOptions();
     const exe = b.addExecutable("Tetris", "src/main.zig");
     exe.setBuildMode(mode);
 
-    exe.addLibPath("C:\\raylib\\raylib\\projects\\VS2017\\bin\\x64\\Release.DLL");
+    // TODO: Check for windows target before adding this.
+    // exe.addLibPath("C:\\raylib\\raylib\\projects\\VS2017\\bin\\x64\\Release.DLL");
 
     exe.linkSystemLibrary("raylib");
     exe.addPackagePath("raylib", "raylib-zig/raylib-zig.zig");

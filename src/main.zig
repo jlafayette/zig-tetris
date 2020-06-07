@@ -293,7 +293,7 @@ const Piece = struct {
     fn get_ghost_square_offset(self: *Piece, grid: *Grid) i32 {
         var offset: i32 = 0;
         while (true) {
-            if (self.check_collision_offset(offset, self.squares, grid)) {
+            if (self.check_collision_offset(0, offset, self.squares, grid)) {
                 break;
             }
             offset += 1;
@@ -309,7 +309,18 @@ const Piece = struct {
         };
         const squares = Piece.get_squares(self.t, r);
         if (self.check_collision(squares, grid)) {
-            return;
+            // Try moving left or right by one or two squares. This helps when trying
+            // to rotate when right next to the wall or another block. Esp noticable
+            // on the 4x1 (Long) type.
+            const x_offsets = [_]i32 { 1, -1, 2, -2 };
+            for (x_offsets) |x_offset| {
+                if (!self.check_collision_offset(x_offset, 0, squares, grid)) {
+                    self.x += x_offset;
+                    self.squares = squares;
+                    self.r = r;
+                    return;
+                }
+            }
         } else {
             self.squares = squares;
             self.r = r;
@@ -325,10 +336,10 @@ const Piece = struct {
         }
         return false;
     }
-    fn check_collision_offset(self: *Piece, offset: i32, squares: [4]Pos, grid: *Grid) bool {
+    fn check_collision_offset(self: *Piece, offset_x: i32, offset_y: i32, squares: [4]Pos, grid: *Grid) bool {
         for (squares) |pos| {
-            const x = self.x + pos.x;
-            const y = self.y + pos.y + offset;
+            const x = self.x + pos.x + offset_x;
+            const y = self.y + pos.y + offset_y;
             if ((x >= grid_width) or (x < 0) or (y >= grid_height) or grid.get_active(x, y)) {
                 return true;
             }
