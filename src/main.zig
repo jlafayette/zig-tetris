@@ -173,28 +173,17 @@ const Piece = struct {
     rng: std.rand.DefaultPrng,
 
     pub fn init(t: Type) Piece {
-
-        // var seed_bytes: [@sizeOf(u64)]u8 = undefined;
-        // std.crypto.randomBytes(seed_bytes[0..]) catch |err| {
-        //     panic("unable to seed random number generator: {}", .{err});
-        // };
-        // var prng = std.rand.DefaultPrng.init(std.mem.readIntNative(u64, &seed_bytes));
-
         var buf: [8]u8 = undefined;
         std.crypto.randomBytes(buf[0..]) catch |err| {
             panic("unable to seed random number generator: {}", .{err});
         };
         const seed = std.mem.readIntLittle(u64, buf[0..8]);
         var r = std.rand.DefaultPrng.init(seed);      
-        // var i: usize = 0;
-        // while (i < 20) : (i += 1) {
-        //     const s = r.random.int(u3);
-        //     warn("{} ", .{s});
-        // }
+        var squares = Piece.get_squares(t, Rotation.A);
         return Piece{
             .x=4,
             .y=0,
-            .squares=Piece.get_squares(t, Rotation.A),
+            .squares=squares,
             .t=t,
             .r=Rotation.A,
             .rng=r,
@@ -303,6 +292,17 @@ const Piece = struct {
         };
     }
 
+    fn get_ghost_square_offset(self: *Piece, grid: *Grid) i32 {
+        var offset: i32 = 0;
+        while (true) {
+            if (self.check_collision_offset(offset, self.squares, grid)) {
+                break;
+            }
+            offset += 1;
+        }
+        return offset - 1;
+    }
+
     pub fn rotate(self: *Piece, grid: *Grid) void {
         const r = switch (self.r) {
             Rotation.A => Rotation.B,
@@ -329,12 +329,26 @@ const Piece = struct {
         }
         return false;
     }
-
-    pub fn update(self: *Piece) void {
-        self.y += 1;
+    fn check_collision_offset(self: *Piece, offset: i32, squares: [4]Pos, grid: *Grid) bool {
+        for (squares) |pos| {
+            const x = self.x + pos.x;
+            const y = self.y + pos.y + offset;
+            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or grid.get_active(x, y)) {
+                return true;
+            }
+        }
+        return false;
     }
-    pub fn draw(self: Piece) void {
+
+    pub fn draw(self: *Piece, grid: *Grid) void {
+        const ghost_square_offset = self.get_ghost_square_offset(grid);
         for (self.squares) |pos| {
+            // Draw ghost
+            DrawRectangle(
+                (self.x + pos.x) * grid_cell_size + margin,
+                (self.y + ghost_square_offset + pos.y) * grid_cell_size,
+                grid_cell_size, grid_cell_size, LIGHTGRAY);
+            // Draw shape
             DrawRectangle(
                 (self.x + pos.x) * grid_cell_size + margin,
                 (self.y + pos.y) * grid_cell_size,
@@ -479,7 +493,7 @@ pub fn main() anyerror!void
             // DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
 
             grid.draw();
-            piece.draw();
+            piece.draw(&grid);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
