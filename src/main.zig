@@ -189,7 +189,6 @@ const Piece = struct {
             .rng=r,
         };
     }
-
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
             Type.Cube => [_]Pos{
@@ -291,7 +290,6 @@ const Piece = struct {
             },
         };
     }
-
     fn get_ghost_square_offset(self: *Piece, grid: *Grid) i32 {
         var offset: i32 = 0;
         while (true) {
@@ -302,7 +300,6 @@ const Piece = struct {
         }
         return offset - 1;
     }
-
     pub fn rotate(self: *Piece, grid: *Grid) void {
         const r = switch (self.r) {
             Rotation.A => Rotation.B,
@@ -318,7 +315,6 @@ const Piece = struct {
             self.r = r;
         }
     }
-
     pub fn check_collision(self: *Piece, squares: [4]Pos, grid: *Grid) bool {
         for (squares) |pos| {
             const x = self.x + pos.x;
@@ -339,7 +335,6 @@ const Piece = struct {
         }
         return false;
     }
-
     pub fn draw(self: *Piece, grid: *Grid) void {
         const ghost_square_offset = self.get_ghost_square_offset(grid);
         for (self.squares) |pos| {
@@ -385,7 +380,7 @@ const Piece = struct {
             self.x -= 1;
         }
     }
-    pub fn move_down(self: *Piece, grid: *Grid) !void {
+    pub fn move_down(self: *Piece, grid: *Grid) !bool {
 
         const can_move = blk: {
             for (self.squares) |pos| {
@@ -399,11 +394,13 @@ const Piece = struct {
         };
         if (can_move) {
             self.y += 1;
+            return true;
         } else {
             for (self.squares) |pos| {
                  grid.set_active_state(self.x + pos.x, self.y + pos.y, true);
             }
             try self.reset(grid);
+            return false;
         }
     }
     pub fn reset(self: *Piece, grid: *Grid) !void {
@@ -411,15 +408,6 @@ const Piece = struct {
         self.x = 4;
         const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
         self.t = @intToEnum(Type, index);
-        // self.t = switch (self.t) {
-        //     Type.Cube => Type.Long,
-        //     Type.Long => Type.Z,
-        //     Type.Z => Type.S,
-        //     Type.S => Type.T,
-        //     Type.T => Type.L,
-        //     Type.L => Type.J,
-        //     Type.J => Type.Cube,
-        // };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
         if (self.check_collision(self.squares, grid)) {
@@ -437,6 +425,7 @@ pub fn main() anyerror!void
     var grid = Grid.init();
     var tick: usize = 0;
     var gameover: bool = false;
+    var freeze_down: i32 = 0;
 
     InitWindow(screen_width, screen_height, "Tetris");
     defer CloseWindow();
@@ -464,22 +453,35 @@ pub fn main() anyerror!void
             piece.move_left(&grid);
         }
         if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
-            piece.move_down(&grid) catch |err| switch (err) {
-                error.NoRoom => { gameover = true; }
-            };
+
+            if (freeze_down <= 0) {
+                if (piece.move_down(&grid)) |moved| {
+                    if (!moved) {
+                        freeze_down = 60;
+                    }
+                } else |err| {
+                    gameover = true;
+                }
+            }
+        }
+        if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
+            freeze_down = 0;
         }
         if (IsKeyPressed(KeyboardKey.KEY_UP)) {
             piece.rotate(&grid);
         }
 
         if (tick == 30) {
-            piece.move_down(&grid) catch |err| switch (err) {
-                error.NoRoom => { gameover = true; }
-            };
+            if (piece.move_down(&grid)) |moved| {} else |err| switch (err) {
+                error.NoRoom => { gameover = true; },
+            }
             grid.update();
             tick = 0;
         }
         tick += 1;
+        if (freeze_down > 0) {
+            freeze_down -= 1;
+        }
 
         // Draw
         //----------------------------------------------------------------------------------

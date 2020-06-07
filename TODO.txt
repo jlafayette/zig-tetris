@@ -1,6 +1,2 @@
-x reset when game over
-x make full rows disappear
-x randomly determine next piece
-  draw projection of square (where it will drop to)
-  make down key not carry over to next piece
+x make down key not carry over to next piece
   show preview of next piece
