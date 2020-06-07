@@ -1,4 +1,4 @@
 x reset when game over
-  make full rows disappear
+x make full rows disappear
   randomly determine next piece
   draw projection of square (where it will drop to)

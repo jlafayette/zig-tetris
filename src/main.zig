@@ -1,6 +1,7 @@
 usingnamespace @import("raylib");
 const std = @import("std");
 const warn = std.debug.warn;
+const panic = std.debug.panic;
 
 const grid_width: i32 = 10;
 const grid_height: i32 = 20;
@@ -169,14 +170,34 @@ const Piece = struct {
     squares: [4]Pos,
     t: Type,
     r: Rotation,
+    rng: std.rand.DefaultPrng,
 
     pub fn init(t: Type) Piece {
+
+        // var seed_bytes: [@sizeOf(u64)]u8 = undefined;
+        // std.crypto.randomBytes(seed_bytes[0..]) catch |err| {
+        //     panic("unable to seed random number generator: {}", .{err});
+        // };
+        // var prng = std.rand.DefaultPrng.init(std.mem.readIntNative(u64, &seed_bytes));
+
+        var buf: [8]u8 = undefined;
+        std.crypto.randomBytes(buf[0..]) catch |err| {
+            panic("unable to seed random number generator: {}", .{err});
+        };
+        const seed = std.mem.readIntLittle(u64, buf[0..8]);
+        var r = std.rand.DefaultPrng.init(seed);      
+        // var i: usize = 0;
+        // while (i < 20) : (i += 1) {
+        //     const s = r.random.int(u3);
+        //     warn("{} ", .{s});
+        // }
         return Piece{
             .x=4,
             .y=0,
             .squares=Piece.get_squares(t, Rotation.A),
             .t=t,
             .r=Rotation.A,
+            .rng=r,
         };
     }
 
@@ -374,15 +395,17 @@ const Piece = struct {
     pub fn reset(self: *Piece, grid: *Grid) !void {
         self.y = 0;
         self.x = 4;
-        self.t = switch (self.t) {
-            Type.Cube => Type.Long,
-            Type.Long => Type.Z,
-            Type.Z => Type.S,
-            Type.S => Type.T,
-            Type.T => Type.L,
-            Type.L => Type.J,
-            Type.J => Type.Cube,
-        };
+        const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
+        self.t = @intToEnum(Type, index);
+        // self.t = switch (self.t) {
+        //     Type.Cube => Type.Long,
+        //     Type.Long => Type.Z,
+        //     Type.Z => Type.S,
+        //     Type.S => Type.T,
+        //     Type.T => Type.L,
+        //     Type.L => Type.J,
+        //     Type.J => Type.Cube,
+        // };
         self.r = Rotation.A;
         self.squares = Piece.get_squares(self.t, self.r);
         if (self.check_collision(self.squares, grid)) {
@@ -390,7 +413,6 @@ const Piece = struct {
         }
     }
 };
-
 
 pub fn main() anyerror!void
 {
