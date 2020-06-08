@@ -10,19 +10,103 @@ const margin: i32 = 20;
 const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2);
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
+const State = enum {
+    StartScreen,
+    Play,
+    Pause,
+    GameOver,
+};
 
-const Grid = struct {
+const Game = struct {
     grid: [grid_width * grid_height]bool,
+    state: State,
+    tick: i32,
+    freeze_down: i32,
+    gameover: bool,
+    x: i32,
+    y: i32,
+    squares: [4]Pos,
+    t: Type,
+    r: Rotation,
+    rng: std.rand.DefaultPrng,
 
-    pub fn init() Grid {
+    pub fn init() Game {
+        // grid
         var grid: [grid_width * grid_height]bool = undefined;
         for (grid) |*item, i| {
             item.* = false;
         }
-        return Grid{ .grid=grid };
-    }
 
-    fn row_is_full(self: Grid, y: i32) bool {
+        // rng
+        var buf: [8]u8 = undefined;
+        std.crypto.randomBytes(buf[0..]) catch |err| {
+            panic("unable to seed random number generator: {}", .{err});
+        };
+        const seed = std.mem.readIntLittle(u64, buf[0..8]);
+        var r = std.rand.DefaultPrng.init(seed);      
+
+        // squares
+        const t = Type.Cube;
+        var squares = Game.get_squares(t, Rotation.A);
+
+        return Game{
+            .grid=grid,
+            .state=State.StartScreen,
+            .tick=0,
+            .freeze_down=0,
+            .gameover=false,
+            .x=4,
+            .y=0,
+            .squares=squares,
+            .t=t,
+            .r=Rotation.A,
+            .rng=r,
+        };
+    }
+    pub fn update(self: *Game) void {
+        if (self.gameover) {
+            self.reset();
+            self.piece_reset() catch |err| {};
+            self.tick = 0;
+            self.gameover = false;
+            self.state = State.GameOver;
+        }
+        if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
+            self.move_right();
+        }
+        if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
+            self.move_left();
+        }
+        if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
+            if (self.freeze_down <= 0) {
+                if (self.move_down()) |moved| {
+                    if (!moved) {
+                        self.freeze_down = 60;
+                    }
+                } else |err| {
+                    self.gameover = true;
+                }
+            }
+        }
+        if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
+            self.freeze_down = 0;
+        }
+        if (IsKeyPressed(KeyboardKey.KEY_UP)) {
+            self.rotate();
+        }
+        if (self.tick == 30) {
+            if (self.move_down()) |moved| {} else |err| switch (err) {
+                error.NoRoom => { self.gameover = true; },
+            }
+            self.remove_full_rows();
+            self.tick = 0;
+        }
+        self.tick += 1;
+        if (self.freeze_down > 0) {
+            self.freeze_down -= 1;
+        }
+    }
+    fn row_is_full(self: Game, y: i32) bool {
         if (y >= self.grid.len or y < 0) {
             warn("Row index out of bounds {}", .{y});
             return false;
@@ -35,7 +119,7 @@ const Grid = struct {
         } else true;
     }
 
-    fn copy_row(self: *Grid, y1: i32, y2: i32) void {
+    fn copy_row(self: *Game, y1: i32, y2: i32) void {
         if (y1 == y2) {
             warn("Invalid copy, {} must not equal {}\n", .{y1, y2});
             return;
@@ -54,7 +138,7 @@ const Grid = struct {
         }
     }
 
-    fn copy_rows(self: *Grid, src_y: i32, dst_y: i32) void {
+    fn copy_rows(self: *Game, src_y: i32, dst_y: i32) void {
         // Starting at dest row, copy everything above, but starting at dest
         if (src_y >= dst_y) {
             warn("{} must be less than {}\n", .{src_y, dst_y});
@@ -69,7 +153,7 @@ const Grid = struct {
         }
     }
 
-    pub fn update(self: *Grid) void {
+    pub fn remove_full_rows(self: *Game) void {
         // Remove full rows
         var y: i32 = grid_height - 1;
         var cp_y: i32 = y;
@@ -86,7 +170,7 @@ const Grid = struct {
         }
     }
 
-    pub fn get_active(self: Grid, x: i32, y: i32) bool {
+    pub fn get_active(self: Game, x: i32, y: i32) bool {
         if (x < 0) { return true; }
         if (y < 0) { return false; }
         const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
@@ -96,7 +180,7 @@ const Grid = struct {
         return self.grid[index];
     }
 
-    pub fn set_active_state(self: *Grid, x: i32, y: i32, state: bool) void {
+    pub fn set_active_state(self: *Game, x: i32, y: i32, state: bool) void {
         if (x < 0 or y < 0) {
             return;
         }
@@ -107,13 +191,24 @@ const Grid = struct {
         self.grid[index] = state;
     }
 
-    pub fn reset(self: *Grid) void {
+    pub fn reset(self: *Game) void {
         for (self.grid) |*item, i| {
             item.* = false;
         }
     }
+    pub fn piece_reset(self: *Game) !void {
+        self.y = 0;
+        self.x = 4;
+        const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
+        self.t = @intToEnum(Type, index);
+        self.r = Rotation.A;
+        self.squares = Game.get_squares(self.t, self.r);
+        if (self.check_collision(self.squares)) {
+            return error.NoRoom;
+        }
+    }
 
-    pub fn draw(self: Grid) void {
+    pub fn draw(self: *Game) void {
         var y: i32 = 0;
         var upper_left_y: i32 = 0;
         while (y < grid_height) {
@@ -134,61 +229,23 @@ const Grid = struct {
             upper_left_y += grid_cell_size;
             y += 1;
         }
+
+        // Draw falling piece and ghost
+        const ghost_square_offset = self.get_ghost_square_offset();
+        for (self.squares) |pos| {
+            // Draw ghost
+            DrawRectangle(
+                (self.x + pos.x) * grid_cell_size + margin,
+                (self.y + ghost_square_offset + pos.y) * grid_cell_size,
+                grid_cell_size, grid_cell_size, LIGHTGRAY);
+            // Draw shape
+            DrawRectangle(
+                (self.x + pos.x) * grid_cell_size + margin,
+                (self.y + pos.y) * grid_cell_size,
+                grid_cell_size, grid_cell_size, GOLD);
+        }
     }
-};
 
-
-const Pos = struct {
-    x: i32,
-    y: i32,
-};
-
-fn p(x: i32, y: i32) Pos {
-    return Pos{ .x=x, .y=y };
-}
-
-const Type = enum {
-    Cube,
-    Long,
-    Z,
-    S,
-    T,
-    L,
-    J,
-};
-const Rotation = enum {
-    A, B, C, D
-};
-
-const GameOver = error {
-    NoRoom,
-};
-
-const Piece = struct {
-    x: i32,
-    y: i32,
-    squares: [4]Pos,
-    t: Type,
-    r: Rotation,
-    rng: std.rand.DefaultPrng,
-
-    pub fn init(t: Type) Piece {
-        var buf: [8]u8 = undefined;
-        std.crypto.randomBytes(buf[0..]) catch |err| {
-            panic("unable to seed random number generator: {}", .{err});
-        };
-        const seed = std.mem.readIntLittle(u64, buf[0..8]);
-        var r = std.rand.DefaultPrng.init(seed);      
-        var squares = Piece.get_squares(t, Rotation.A);
-        return Piece{
-            .x=4,
-            .y=0,
-            .squares=squares,
-            .t=t,
-            .r=Rotation.A,
-            .rng=r,
-        };
-    }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
             Type.Cube => [_]Pos{
@@ -290,31 +347,31 @@ const Piece = struct {
             },
         };
     }
-    fn get_ghost_square_offset(self: *Piece, grid: *Grid) i32 {
+    pub fn get_ghost_square_offset(self: *Game) i32 {
         var offset: i32 = 0;
         while (true) {
-            if (self.check_collision_offset(0, offset, self.squares, grid)) {
+            if (self.check_collision_offset(0, offset, self.squares)) {
                 break;
             }
             offset += 1;
         }
         return offset - 1;
     }
-    pub fn rotate(self: *Piece, grid: *Grid) void {
+    pub fn rotate(self: *Game) void {
         const r = switch (self.r) {
             Rotation.A => Rotation.B,
             Rotation.B => Rotation.C,
             Rotation.C => Rotation.D,
             Rotation.D => Rotation.A,
         };
-        const squares = Piece.get_squares(self.t, r);
-        if (self.check_collision(squares, grid)) {
+        const squares = Game.get_squares(self.t, r);
+        if (self.check_collision(squares)) {
             // Try moving left or right by one or two squares. This helps when trying
             // to rotate when right next to the wall or another block. Esp noticable
             // on the 4x1 (Long) type.
             const x_offsets = [_]i32 { 1, -1, 2, -2 };
             for (x_offsets) |x_offset| {
-                if (!self.check_collision_offset(x_offset, 0, squares, grid)) {
+                if (!self.check_collision_offset(x_offset, 0, squares)) {
                     self.x += x_offset;
                     self.squares = squares;
                     self.r = r;
@@ -326,47 +383,33 @@ const Piece = struct {
             self.r = r;
         }
     }
-    pub fn check_collision(self: *Piece, squares: [4]Pos, grid: *Grid) bool {
+    pub fn check_collision(self: *Game, squares: [4]Pos) bool {
         for (squares) |pos| {
             const x = self.x + pos.x;
             const y = self.y + pos.y;
-            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or grid.get_active(x, y)) {
+            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or self.get_active(x, y)) {
                 return true;
             }
         }
         return false;
     }
-    fn check_collision_offset(self: *Piece, offset_x: i32, offset_y: i32, squares: [4]Pos, grid: *Grid) bool {
+    fn check_collision_offset(self: *Game, offset_x: i32, offset_y: i32, squares: [4]Pos) bool {
         for (squares) |pos| {
             const x = self.x + pos.x + offset_x;
             const y = self.y + pos.y + offset_y;
-            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or grid.get_active(x, y)) {
+            if ((x >= grid_width) or (x < 0) or (y >= grid_height) or self.get_active(x, y)) {
                 return true;
             }
         }
         return false;
     }
-    pub fn draw(self: *Piece, grid: *Grid) void {
-        const ghost_square_offset = self.get_ghost_square_offset(grid);
-        for (self.squares) |pos| {
-            // Draw ghost
-            DrawRectangle(
-                (self.x + pos.x) * grid_cell_size + margin,
-                (self.y + ghost_square_offset + pos.y) * grid_cell_size,
-                grid_cell_size, grid_cell_size, LIGHTGRAY);
-            // Draw shape
-            DrawRectangle(
-                (self.x + pos.x) * grid_cell_size + margin,
-                (self.y + pos.y) * grid_cell_size,
-                grid_cell_size, grid_cell_size, GOLD);
-        }
-    }
-    pub fn move_right(self: *Piece, grid: *Grid) void {
+
+    pub fn move_right(self: *Game) void {
         const can_move = blk: {
             for (self.squares) |pos| {
                 const x = self.x + pos.x + 1;
                 const y = self.y + pos.y;
-                if ((x >= grid_width) or grid.get_active(x, y)) {
+                if ((x >= grid_width) or self.get_active(x, y)) {
                     break :blk false;
                 }
             }
@@ -376,12 +419,12 @@ const Piece = struct {
             self.x += 1;
         }
     }
-    pub fn move_left(self: *Piece, grid: *Grid) void {
+    pub fn move_left(self: *Game) void {
         const can_move = blk: {
             for (self.squares) |pos| {
                 const x = self.x + pos.x - 1;
                 const y = self.y + pos.y;
-                if ((x < 0) or grid.get_active(x, y)) {
+                if ((x < 0) or self.get_active(x, y)) {
                     break :blk false;
                 }
             }
@@ -391,13 +434,13 @@ const Piece = struct {
             self.x -= 1;
         }
     }
-    pub fn move_down(self: *Piece, grid: *Grid) !bool {
+    pub fn move_down(self: *Game) !bool {
 
         const can_move = blk: {
             for (self.squares) |pos| {
                 const x = self.x + pos.x;
                 const y = self.y + pos.y + 1;
-                if ((y >= grid_height) or grid.get_active(x, y)) {
+                if ((y >= grid_height) or self.get_active(x, y)) {
                     break :blk false;
                 }
             }
@@ -408,107 +451,60 @@ const Piece = struct {
             return true;
         } else {
             for (self.squares) |pos| {
-                 grid.set_active_state(self.x + pos.x, self.y + pos.y, true);
+                 self.set_active_state(self.x + pos.x, self.y + pos.y, true);
             }
-            try self.reset(grid);
+            try self.piece_reset();
             return false;
         }
     }
-    pub fn reset(self: *Piece, grid: *Grid) !void {
-        self.y = 0;
-        self.x = 4;
-        const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
-        self.t = @intToEnum(Type, index);
-        self.r = Rotation.A;
-        self.squares = Piece.get_squares(self.t, self.r);
-        if (self.check_collision(self.squares, grid)) {
-            return error.NoRoom;
-        }
-    }
+};
+
+
+const Pos = struct {
+    x: i32,
+    y: i32,
+};
+
+fn p(x: i32, y: i32) Pos {
+    return Pos{ .x=x, .y=y };
+}
+
+const Type = enum {
+    Cube,
+    Long,
+    Z,
+    S,
+    T,
+    L,
+    J,
+};
+const Rotation = enum {
+    A, B, C, D
+};
+
+const GameOver = error {
+    NoRoom,
 };
 
 pub fn main() anyerror!void
 {
     // Initialization
-    //--------------------------------------------------------------------------------------
-
-    var piece = Piece.init(Type.Cube);
-    var grid = Grid.init();
-    var tick: usize = 0;
-    var gameover: bool = false;
-    var freeze_down: i32 = 0;
-
+    var game = Game.init();
     InitWindow(screen_width, screen_height, "Tetris");
     defer CloseWindow();
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
-    //--------------------------------------------------------------------------------------
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
-        // Update
-        //----------------------------------------------------------------------------------
+        game.update();
 
-        if (gameover) {
-            grid.reset();
-            piece.reset(&grid) catch |err| {};
-            tick = 0;
-            gameover = false;
-        }
-
-        if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
-            piece.move_right(&grid);
-        }
-        if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
-            piece.move_left(&grid);
-        }
-        if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
-
-            if (freeze_down <= 0) {
-                if (piece.move_down(&grid)) |moved| {
-                    if (!moved) {
-                        freeze_down = 60;
-                    }
-                } else |err| {
-                    gameover = true;
-                }
-            }
-        }
-        if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
-            freeze_down = 0;
-        }
-        if (IsKeyPressed(KeyboardKey.KEY_UP)) {
-            piece.rotate(&grid);
-        }
-
-        if (tick == 30) {
-            if (piece.move_down(&grid)) |moved| {} else |err| switch (err) {
-                error.NoRoom => { gameover = true; },
-            }
-            grid.update();
-            tick = 0;
-        }
-        tick += 1;
-        if (freeze_down > 0) {
-            freeze_down -= 1;
-        }
-
-        // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
             ClearBackground(LIGHTGRAY);
-
-            // // draw border
-            // DrawRectangle(0, 0, margin, screen_height, LIGHTGRAY);  // left
-            // DrawRectangle(screen_width - margin, 0, margin, screen_height, LIGHTGRAY); // right
-            // DrawRectangle(margin, screen_height - margin, screen_width - (margin * 2), margin, LIGHTGRAY); // bottom
-
-            grid.draw();
-            piece.draw(&grid);
+            game.draw();
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 }
