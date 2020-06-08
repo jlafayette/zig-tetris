@@ -5,6 +5,8 @@ x add start screen
 x add game over screen (retry)
 x add pause button
 x add pause overlay
+  add README
+  add LICENSE
   add difficulty? maybe faster ticks, junk rows
   play around with color
     each piece has a color
