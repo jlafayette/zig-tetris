@@ -39,10 +39,6 @@ const Rotation = enum {
     A, B, C, D
 };
 
-const GameOver = error {
-    NoRoom,
-};
-
 const Game = struct {
     grid: [grid_width * grid_height]bool,
     squares: [4]Pos,
@@ -54,7 +50,6 @@ const Game = struct {
     freeze_down: i32,
     x: i32,
     y: i32,
-    gameover: bool,
 
     pub fn init() Game {
         // grid
@@ -83,16 +78,14 @@ const Game = struct {
             .freeze_down=0,
             .x=4,
             .y=0,
-            .gameover=false,
         };
     }
     pub fn update(self: *Game) void {
-        if (self.gameover) {
+        if (self.state == State.GameOver) {
             self.reset();
-            self.piece_reset() catch |err| {};
+            self.piece_reset();
             self.tick = 0;
-            self.gameover = false;
-            self.state = State.GameOver;
+            self.state = State.Play;
         }
         if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
             self.move_right();
@@ -102,12 +95,9 @@ const Game = struct {
         }
         if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
             if (self.freeze_down <= 0) {
-                if (self.move_down()) |moved| {
-                    if (!moved) {
-                        self.freeze_down = 60;
-                    }
-                } else |err| {
-                    self.gameover = true;
+                const moved = self.move_down();
+                if (!moved) {
+                    self.freeze_down = 60;
                 }
             }
         }
@@ -118,9 +108,7 @@ const Game = struct {
             self.rotate();
         }
         if (self.tick == 30) {
-            if (self.move_down()) |moved| {} else |err| switch (err) {
-                error.NoRoom => { self.gameover = true; },
-            }
+            _ = self.move_down();
             self.remove_full_rows();
             self.tick = 0;
         }
@@ -213,7 +201,7 @@ const Game = struct {
             item.* = false;
         }
     }
-    pub fn piece_reset(self: *Game) !void {
+    pub fn piece_reset(self: *Game) void {
         self.y = 0;
         self.x = 4;
         const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
@@ -221,7 +209,7 @@ const Game = struct {
         self.r = Rotation.A;
         self.squares = Game.get_squares(self.t, self.r);
         if (self.check_collision(self.squares)) {
-            return error.NoRoom;
+            self.state = State.GameOver;
         }
     }
     pub fn draw(self: *Game) void {
@@ -448,7 +436,7 @@ const Game = struct {
             self.x -= 1;
         }
     }
-    pub fn move_down(self: *Game) !bool {
+    pub fn move_down(self: *Game) bool {
         const can_move = blk: {
             for (self.squares) |pos| {
                 const x = self.x + pos.x;
@@ -466,7 +454,7 @@ const Game = struct {
             for (self.squares) |pos| {
                  self.set_active_state(self.x + pos.x, self.y + pos.y, true);
             }
-            try self.piece_reset();
+            self.piece_reset();
             return false;
         }
     }
