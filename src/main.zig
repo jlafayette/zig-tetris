@@ -17,18 +17,44 @@ const State = enum {
     GameOver,
 };
 
-const Game = struct {
-    grid: [grid_width * grid_height]bool,
-    state: State,
-    tick: i32,
-    freeze_down: i32,
-    gameover: bool,
+const Pos = struct {
     x: i32,
     y: i32,
+};
+
+fn p(x: i32, y: i32) Pos {
+    return Pos{ .x=x, .y=y };
+}
+
+const Type = enum {
+    Cube,
+    Long,
+    Z,
+    S,
+    T,
+    L,
+    J,
+};
+const Rotation = enum {
+    A, B, C, D
+};
+
+const GameOver = error {
+    NoRoom,
+};
+
+const Game = struct {
+    grid: [grid_width * grid_height]bool,
     squares: [4]Pos,
+    rng: std.rand.DefaultPrng,
+    state: State,
     t: Type,
     r: Rotation,
-    rng: std.rand.DefaultPrng,
+    tick: i32,
+    freeze_down: i32,
+    x: i32,
+    y: i32,
+    gameover: bool,
 
     pub fn init() Game {
         // grid
@@ -36,7 +62,6 @@ const Game = struct {
         for (grid) |*item, i| {
             item.* = false;
         }
-
         // rng
         var buf: [8]u8 = undefined;
         std.crypto.randomBytes(buf[0..]) catch |err| {
@@ -44,23 +69,21 @@ const Game = struct {
         };
         const seed = std.mem.readIntLittle(u64, buf[0..8]);
         var r = std.rand.DefaultPrng.init(seed);      
-
         // squares
         const t = Type.Cube;
         var squares = Game.get_squares(t, Rotation.A);
-
         return Game{
             .grid=grid,
-            .state=State.StartScreen,
-            .tick=0,
-            .freeze_down=0,
-            .gameover=false,
-            .x=4,
-            .y=0,
             .squares=squares,
+            .rng=r,
+            .state=State.StartScreen,
             .t=t,
             .r=Rotation.A,
-            .rng=r,
+            .tick=0,
+            .freeze_down=0,
+            .x=4,
+            .y=0,
+            .gameover=false,
         };
     }
     pub fn update(self: *Game) void {
@@ -118,7 +141,6 @@ const Game = struct {
             }
         } else true;
     }
-
     fn copy_row(self: *Game, y1: i32, y2: i32) void {
         if (y1 == y2) {
             warn("Invalid copy, {} must not equal {}\n", .{y1, y2});
@@ -137,7 +159,6 @@ const Game = struct {
             }
         }
     }
-
     fn copy_rows(self: *Game, src_y: i32, dst_y: i32) void {
         // Starting at dest row, copy everything above, but starting at dest
         if (src_y >= dst_y) {
@@ -152,7 +173,6 @@ const Game = struct {
             y2 -= 1;
         }
     }
-
     pub fn remove_full_rows(self: *Game) void {
         // Remove full rows
         var y: i32 = grid_height - 1;
@@ -169,7 +189,6 @@ const Game = struct {
             cp_y -= 1;
         }
     }
-
     pub fn get_active(self: Game, x: i32, y: i32) bool {
         if (x < 0) { return true; }
         if (y < 0) { return false; }
@@ -179,7 +198,6 @@ const Game = struct {
         }
         return self.grid[index];
     }
-
     pub fn set_active_state(self: *Game, x: i32, y: i32, state: bool) void {
         if (x < 0 or y < 0) {
             return;
@@ -190,7 +208,6 @@ const Game = struct {
         }
         self.grid[index] = state;
     }
-
     pub fn reset(self: *Game) void {
         for (self.grid) |*item, i| {
             item.* = false;
@@ -207,7 +224,6 @@ const Game = struct {
             return error.NoRoom;
         }
     }
-
     pub fn draw(self: *Game) void {
         var y: i32 = 0;
         var upper_left_y: i32 = 0;
@@ -245,7 +261,6 @@ const Game = struct {
                 grid_cell_size, grid_cell_size, GOLD);
         }
     }
-
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
             Type.Cube => [_]Pos{
@@ -403,7 +418,6 @@ const Game = struct {
         }
         return false;
     }
-
     pub fn move_right(self: *Game) void {
         const can_move = blk: {
             for (self.squares) |pos| {
@@ -435,7 +449,6 @@ const Game = struct {
         }
     }
     pub fn move_down(self: *Game) !bool {
-
         const can_move = blk: {
             for (self.squares) |pos| {
                 const x = self.x + pos.x;
@@ -457,33 +470,6 @@ const Game = struct {
             return false;
         }
     }
-};
-
-
-const Pos = struct {
-    x: i32,
-    y: i32,
-};
-
-fn p(x: i32, y: i32) Pos {
-    return Pos{ .x=x, .y=y };
-}
-
-const Type = enum {
-    Cube,
-    Long,
-    Z,
-    S,
-    T,
-    L,
-    J,
-};
-const Rotation = enum {
-    A, B, C, D
-};
-
-const GameOver = error {
-    NoRoom,
 };
 
 pub fn main() anyerror!void
