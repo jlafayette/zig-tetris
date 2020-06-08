@@ -81,40 +81,66 @@ const Game = struct {
         };
     }
     pub fn update(self: *Game) void {
-        if (self.state == State.GameOver) {
-            self.reset();
-            self.piece_reset();
-            self.tick = 0;
-            self.state = State.Play;
-        }
-        if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
-            self.move_right();
-        }
-        if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
-            self.move_left();
-        }
-        if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
-            if (self.freeze_down <= 0) {
-                const moved = self.move_down();
-                if (!moved) {
-                    self.freeze_down = 60;
+        switch (self.state) {
+            State.StartScreen => {
+                // self.state = State.Play;
+                const k = GetKeyPressed();
+                if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
+                    self.state = State.Play;
+                } else {
+                    // Seems like some keys don't register with GetKeyPressed, so
+                    // checking for them manually here.
+                    if (
+                        IsKeyPressed(KeyboardKey.KEY_DOWN) or
+                        IsKeyPressed(KeyboardKey.KEY_LEFT) or
+                        IsKeyPressed(KeyboardKey.KEY_RIGHT) or
+                        IsKeyPressed(KeyboardKey.KEY_DOWN) or
+                        IsKeyPressed(KeyboardKey.KEY_ENTER)
+                    ) {
+                        self.state = State.Play;
+                    }
                 }
-            }
-        }
-        if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
-            self.freeze_down = 0;
-        }
-        if (IsKeyPressed(KeyboardKey.KEY_UP)) {
-            self.rotate();
-        }
-        if (self.tick == 30) {
-            _ = self.move_down();
-            self.remove_full_rows();
-            self.tick = 0;
-        }
-        self.tick += 1;
-        if (self.freeze_down > 0) {
-            self.freeze_down -= 1;
+            },
+            State.GameOver => {
+                self.reset();
+                self.piece_reset();
+                self.tick = 0;
+                self.state = State.Play;
+            },
+            State.Play => {
+                if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
+                    self.move_right();
+                }
+                if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
+                    self.move_left();
+                }
+                if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
+                    if (self.freeze_down <= 0) {
+                        const moved = self.move_down();
+                        if (!moved) {
+                            self.freeze_down = 60;
+                        }
+                    }
+                }
+                if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
+                    self.freeze_down = 0;
+                }
+                if (IsKeyPressed(KeyboardKey.KEY_UP)) {
+                    self.rotate();
+                }
+                if (self.tick == 30) {
+                    _ = self.move_down();
+                    self.remove_full_rows();
+                    self.tick = 0;
+                }
+                self.tick += 1;
+                if (self.freeze_down > 0) {
+                    self.freeze_down -= 1;
+                }
+            },
+            else => {
+                self.state = State.Play;
+            },
         }
     }
     fn row_is_full(self: Game, y: i32) bool {
@@ -213,41 +239,51 @@ const Game = struct {
         }
     }
     pub fn draw(self: *Game) void {
-        var y: i32 = 0;
-        var upper_left_y: i32 = 0;
-        while (y < grid_height) {
-            var x: i32 = 0;
-            var upper_left_x: i32 = margin;
-            while (x < grid_width) {
+        switch (self.state) {
+            State.StartScreen => {
+                DrawText("TETRIS", 75, screen_height / 2 - 50, 50, BLACK);
+                DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
+            },
+            State.Play => {
+                var y: i32 = 0;
+                var upper_left_y: i32 = 0;
+                while (y < grid_height) {
+                    var x: i32 = 0;
+                    var upper_left_x: i32 = margin;
+                    while (x < grid_width) {
 
-                if (self.get_active(x, y)) {
-                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, DARKGRAY);
-                } else {
-                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, LIGHTGRAY);
-                    DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, WHITE);
+                        if (self.get_active(x, y)) {
+                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, DARKGRAY);
+                        } else {
+                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, LIGHTGRAY);
+                            DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, WHITE);
+                        }
+
+                        upper_left_x += grid_cell_size; 
+                        x += 1;
+                    }
+                    upper_left_y += grid_cell_size;
+                    y += 1;
                 }
 
-                upper_left_x += grid_cell_size; 
-                x += 1;
-            }
-            upper_left_y += grid_cell_size;
-            y += 1;
+                // Draw falling piece and ghost
+                const ghost_square_offset = self.get_ghost_square_offset();
+                for (self.squares) |pos| {
+                    // Draw ghost
+                    DrawRectangle(
+                        (self.x + pos.x) * grid_cell_size + margin,
+                        (self.y + ghost_square_offset + pos.y) * grid_cell_size,
+                        grid_cell_size, grid_cell_size, LIGHTGRAY);
+                    // Draw shape
+                    DrawRectangle(
+                        (self.x + pos.x) * grid_cell_size + margin,
+                        (self.y + pos.y) * grid_cell_size,
+                        grid_cell_size, grid_cell_size, GOLD);
+                }
+            },
+            else => {},
         }
-
-        // Draw falling piece and ghost
-        const ghost_square_offset = self.get_ghost_square_offset();
-        for (self.squares) |pos| {
-            // Draw ghost
-            DrawRectangle(
-                (self.x + pos.x) * grid_cell_size + margin,
-                (self.y + ghost_square_offset + pos.y) * grid_cell_size,
-                grid_cell_size, grid_cell_size, LIGHTGRAY);
-            // Draw shape
-            DrawRectangle(
-                (self.x + pos.x) * grid_cell_size + margin,
-                (self.y + pos.y) * grid_cell_size,
-                grid_cell_size, grid_cell_size, GOLD);
-        }
+        
     }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {

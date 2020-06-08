@@ -10,4 +10,3 @@ x add side attempt when rotating next to edge
     each piece has a color
     desaturate colors when they are added to the grid
     make ghost a desaturated tint of current piece color
-x refactor Piece and Grid into Game struct (piece almost always requires grid as argument anyway)
