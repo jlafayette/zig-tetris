@@ -91,11 +91,11 @@ const Game = struct {
                     // Seems like some keys don't register with GetKeyPressed, so
                     // checking for them manually here.
                     if (
-                        IsKeyPressed(KeyboardKey.KEY_DOWN) or
-                        IsKeyPressed(KeyboardKey.KEY_LEFT) or
-                        IsKeyPressed(KeyboardKey.KEY_RIGHT) or
-                        IsKeyPressed(KeyboardKey.KEY_DOWN) or
-                        IsKeyPressed(KeyboardKey.KEY_ENTER)
+                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                        IsKeyReleased(KeyboardKey.KEY_LEFT) or
+                        IsKeyReleased(KeyboardKey.KEY_RIGHT) or
+                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                        IsKeyReleased(KeyboardKey.KEY_ENTER)
                     ) {
                         self.state = State.Play;
                     }
@@ -108,6 +108,13 @@ const Game = struct {
                 self.state = State.Play;
             },
             State.Play => {
+                if (
+                    (IsKeyReleased(KeyboardKey.KEY_SPACE)) or
+                    (IsKeyReleased(KeyboardKey.KEY_P))
+                ) {
+                    self.state = State.Pause;
+                    return;
+                }
                 if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
                     self.move_right();
                 }
@@ -136,6 +143,14 @@ const Game = struct {
                 self.tick += 1;
                 if (self.freeze_down > 0) {
                     self.freeze_down -= 1;
+                }
+            },
+            State.Pause => {
+                if (
+                    (IsKeyReleased(KeyboardKey.KEY_SPACE)) or
+                    (IsKeyReleased(KeyboardKey.KEY_P))
+                ) {
+                    self.state = State.Play;
                 }
             },
             else => {
@@ -244,7 +259,7 @@ const Game = struct {
                 DrawText("TETRIS", 75, screen_height / 2 - 50, 50, BLACK);
                 DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
             },
-            State.Play => {
+            State.Play, State.Pause => {
                 var y: i32 = 0;
                 var upper_left_y: i32 = 0;
                 while (y < grid_height) {
@@ -283,7 +298,10 @@ const Game = struct {
             },
             else => {},
         }
-        
+        if (self.state == State.Pause) {
+            DrawText("PAUSED", 75, screen_height / 2 - 50, 50, BLACK);
+            DrawText("Press SPACE to unpause", 50, screen_height / 2, 20, DARKGRAY);
+        }
     }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
