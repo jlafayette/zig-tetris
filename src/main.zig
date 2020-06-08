@@ -83,7 +83,6 @@ const Game = struct {
     pub fn update(self: *Game) void {
         switch (self.state) {
             State.StartScreen => {
-                // self.state = State.Play;
                 const k = GetKeyPressed();
                 if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
                     self.state = State.Play;
@@ -102,10 +101,28 @@ const Game = struct {
                 }
             },
             State.GameOver => {
-                self.reset();
-                self.piece_reset();
-                self.tick = 0;
-                self.state = State.Play;
+                var change: bool = false;
+                if (GetKeyPressed() != @enumToInt(KeyboardKey.KEY_NULL)) {
+                    change = true;
+                } else {
+                    // Seems like some keys don't register with GetKeyPressed, so
+                    // checking for them manually here.
+                    if (
+                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                        IsKeyReleased(KeyboardKey.KEY_LEFT) or
+                        IsKeyReleased(KeyboardKey.KEY_RIGHT) or
+                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                        IsKeyReleased(KeyboardKey.KEY_ENTER)
+                    ) {
+                        change = true;
+                    }
+                }
+                if (change) {
+                    self.reset();
+                    self.piece_reset();
+                    self.tick = 0;
+                    self.state = State.Play;
+                }
             },
             State.Play => {
                 if (
@@ -256,10 +273,12 @@ const Game = struct {
     pub fn draw(self: *Game) void {
         switch (self.state) {
             State.StartScreen => {
+                ClearBackground(WHITE);
                 DrawText("TETRIS", 75, screen_height / 2 - 50, 50, BLACK);
                 DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
             },
-            State.Play, State.Pause => {
+            State.Play, State.Pause, State.GameOver => {
+                ClearBackground(LIGHTGRAY);
                 var y: i32 = 0;
                 var upper_left_y: i32 = 0;
                 while (y < grid_height) {
@@ -301,6 +320,10 @@ const Game = struct {
         if (self.state == State.Pause) {
             DrawText("PAUSED", 75, screen_height / 2 - 50, 50, BLACK);
             DrawText("Press SPACE to unpause", 50, screen_height / 2, 20, DARKGRAY);
+        }
+        if (self.state == State.GameOver) {
+            DrawText("GAME OVER", 45, screen_height / 2 - 50, 42, BLACK);
+            DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
         }
     }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
@@ -530,7 +553,6 @@ pub fn main() anyerror!void
 
         BeginDrawing();
 
-            ClearBackground(LIGHTGRAY);
             game.draw();
 
         EndDrawing();

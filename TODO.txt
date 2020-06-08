@@ -1,10 +1,10 @@
 x make down key not carry over to next piece
 x show preview of next piece
 x add side attempt when rotating next to edge
-  add start screen
+x add start screen
   add game over screen (retry)
-  add pause button
-  add pause overlay
+x add pause button
+x add pause overlay
   add difficulty? maybe faster ticks, junk rows
   play around with color
     each piece has a color
