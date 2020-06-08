@@ -2,7 +2,7 @@ x make down key not carry over to next piece
 x show preview of next piece
 x add side attempt when rotating next to edge
 x add start screen
-  add game over screen (retry)
+x add game over screen (retry)
 x add pause button
 x add pause overlay
   add difficulty? maybe faster ticks, junk rows

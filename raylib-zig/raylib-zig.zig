@@ -140,7 +140,7 @@ pub const Image = extern struct {
         return GenImageGradientV(width, height, top, bottom);
     }
 
-    pub fn GenGradientV(width: c_int, height: c_int, left: Color, right: Color) Image {
+    pub fn GenGradientH(width: c_int, height: c_int, left: Color, right: Color) Image {
         return GenImageGradientV(width, height, left, right);
     }
 

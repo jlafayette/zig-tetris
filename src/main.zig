@@ -544,17 +544,18 @@ pub fn main() anyerror!void
     InitWindow(screen_width, screen_height, "Tetris");
     defer CloseWindow();
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    // Set the game to run at 60 frames-per-second
+    SetTargetFPS(60);
+
+    // Solves blurry font on high resolution displays
+    SetTextureFilter(GetFontDefault().texture, @enumToInt(TextureFilterMode.FILTER_POINT));
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())  // Detect window close button or ESC key
     {
         game.update();
-
         BeginDrawing();
-
             game.draw();
-
         EndDrawing();
     }
 }
