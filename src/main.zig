@@ -270,6 +270,17 @@ const Game = struct {
             self.state = State.GameOver;
         }
     }
+    fn piece_color(self: *Game) Color {
+        return switch (self.t) {
+            Type.Cube => RED,
+            Type.Long => SKYBLUE,
+            Type.L => GREEN,
+            Type.J => BLUE,
+            Type.T => GOLD,
+            Type.S => ORANGE,
+            Type.Z => PURPLE,
+        };
+    }
     pub fn draw(self: *Game) void {
         switch (self.state) {
             State.StartScreen => {
@@ -312,7 +323,7 @@ const Game = struct {
                     DrawRectangle(
                         (self.x + pos.x) * grid_cell_size + margin,
                         (self.y + pos.y) * grid_cell_size,
-                        grid_cell_size, grid_cell_size, GOLD);
+                        grid_cell_size, grid_cell_size, self.piece_color());
                 }
             },
             else => {},

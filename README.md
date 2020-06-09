@@ -28,7 +28,7 @@ I'm probably doing this wrong...
 
 ## TODO
 
-- [ ] Give each piece has a color
+- [x] Give each piece a color
 - [ ] Desaturate colors when they are added to the grid
 - [ ] Make ghost a desaturated tint of current piece color
 - [ ] Display controls on the start and pause screens
