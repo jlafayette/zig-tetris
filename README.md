@@ -29,11 +29,15 @@ I'm probably doing this wrong...
 ## TODO
 
 - [x] Give each piece a color
-- [ ] Desaturate colors when they are added to the grid
-- [ ] Make ghost a desaturated tint of current piece color
+- [x] Desaturate colors when they are added to the grid
+- [x] Make ghost a desaturated tint of current piece color
+- [ ] Show preview of next piece
 - [ ] Display controls on the start and pause screens
 - [ ] Add difficulty? maybe faster ticks, junk rows
 - [ ] Add score
 - [ ] Add sound
 - [ ] Add two player coop or competition mode?
 - [ ] Add screenshot or gif to README
+- [ ] Scores
+- [ ] High score
+- [ ] Level up

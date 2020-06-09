@@ -10,6 +10,17 @@ const margin: i32 = 20;
 const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2);
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
+fn rgb(r: u8, g: u8, b: u8) Color {
+    return Color{ .r=r, .g=g, .b=b, .a=255 };
+}
+fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
+    return Color{ .r=r, .g=g, .b=b, .a=a };
+}
+const BackgroundColor = rgb(29, 38, 57);
+const BackgroundHiLightColor = rgb(39, 48, 67);
+const BorderColor = rgb(3, 2, 1);
+
+
 const State = enum {
     StartScreen,
     Play,
@@ -38,9 +49,13 @@ const Type = enum {
 const Rotation = enum {
     A, B, C, D
 };
+const Square = struct {
+    color: Color,
+    active: bool,
+};
 
 const Game = struct {
-    grid: [grid_width * grid_height]bool,
+    grid: [grid_width * grid_height]Square,
     squares: [4]Pos,
     rng: std.rand.DefaultPrng,
     state: State,
@@ -53,9 +68,9 @@ const Game = struct {
 
     pub fn init() Game {
         // grid
-        var grid: [grid_width * grid_height]bool = undefined;
+        var grid: [grid_width * grid_height]Square = undefined;
         for (grid) |*item, i| {
-            item.* = false;
+            item.* = Square{ .color=WHITE, .active=false };
         }
         // rng
         var buf: [8]u8 = undefined;
@@ -200,8 +215,10 @@ const Game = struct {
         while (x < grid_width) : (x += 1) {
             if (y1 < 0) {
                 self.set_active_state(x, y2, false);
+                self.set_grid_color(x, y2, WHITE);
             } else {
                 self.set_active_state(x, y2, self.get_active(x, y1));
+                self.set_grid_color(x, y2, self.get_grid_color(x, y1));
             }
         }
     }
@@ -242,7 +259,16 @@ const Game = struct {
         if (index >= self.grid.len) {
             return true;
         }
-        return self.grid[index];
+        return self.grid[index].active;
+    }
+    pub fn get_grid_color(self: Game, x: i32, y: i32) Color {
+        if (x < 0) { return LIGHTGRAY; }
+        if (y < 0) { return WHITE; }
+        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        if (index >= self.grid.len) {
+            return LIGHTGRAY;
+        }
+        return self.grid[index].color;
     }
     pub fn set_active_state(self: *Game, x: i32, y: i32, state: bool) void {
         if (x < 0 or y < 0) {
@@ -252,11 +278,21 @@ const Game = struct {
         if (index >= self.grid.len) {
             return;
         }
-        self.grid[index] = state;
+        self.grid[index].active = state;
+    }
+    fn set_grid_color(self: *Game, x: i32, y: i32, color: Color) void {
+        if (x < 0 or y < 0) {
+            return;
+        }
+        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        if (index >= self.grid.len) {
+            return;
+        }
+        self.grid[index].color = color;
     }
     pub fn reset(self: *Game) void {
         for (self.grid) |*item, i| {
-            item.* = false;
+            item.* = Square{ .color=WHITE, .active=false };
         }
     }
     pub fn piece_reset(self: *Game) void {
@@ -272,13 +308,35 @@ const Game = struct {
     }
     fn piece_color(self: *Game) Color {
         return switch (self.t) {
-            Type.Cube => RED,
-            Type.Long => SKYBLUE,
-            Type.L => GREEN,
-            Type.J => BLUE,
-            Type.T => GOLD,
-            Type.S => ORANGE,
-            Type.Z => PURPLE,
+            Type.Cube => rgb(241, 211, 90),
+            Type.Long => rgb(83, 179, 219),
+            Type.L =>    rgb(92, 205, 162),
+            Type.J =>    rgb(231, 111, 124),
+            Type.T =>    rgb(195, 58, 47),
+            Type.S =>    rgb(96, 150, 71),
+            Type.Z =>    rgb(233, 154, 56),
+        };
+    }
+    fn piece_shade(self: *Game) Color {
+        return switch (self.t) {
+            Type.Cube => rgb(241, 211, 90),
+            Type.Long => rgb(83, 179, 219),
+            Type.L =>    rgb(92, 205, 162),
+            Type.J =>    rgb(231, 111, 124),
+            Type.T =>    rgb(195, 58, 47),
+            Type.S =>    rgb(96, 150, 71),
+            Type.Z =>    rgb(233, 154, 56),
+        };
+    }
+    fn piece_ghost(self: *Game) Color {
+        return switch (self.t) {
+            Type.Cube => rgba(241, 211, 90, 175),
+            Type.Long => rgba(83, 179, 219, 175),
+            Type.L =>    rgba(92, 205, 162, 175),
+            Type.J =>    rgba(231, 111, 124, 175),
+            Type.T =>    rgba(195, 58, 47, 175),
+            Type.S =>    rgba(96, 150, 71, 175),
+            Type.Z =>    rgba(233, 154, 56, 175),
         };
     }
     pub fn draw(self: *Game) void {
@@ -289,7 +347,7 @@ const Game = struct {
                 DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
             },
             State.Play, State.Pause, State.GameOver => {
-                ClearBackground(LIGHTGRAY);
+                ClearBackground(BorderColor);
                 var y: i32 = 0;
                 var upper_left_y: i32 = 0;
                 while (y < grid_height) {
@@ -298,10 +356,10 @@ const Game = struct {
                     while (x < grid_width) {
 
                         if (self.get_active(x, y)) {
-                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, DARKGRAY);
+                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
                         } else {
-                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, LIGHTGRAY);
-                            DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, WHITE);
+                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, BackgroundHiLightColor);
+                            DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
                         }
 
                         upper_left_x += grid_cell_size; 
@@ -318,7 +376,7 @@ const Game = struct {
                     DrawRectangle(
                         (self.x + pos.x) * grid_cell_size + margin,
                         (self.y + ghost_square_offset + pos.y) * grid_cell_size,
-                        grid_cell_size, grid_cell_size, LIGHTGRAY);
+                        grid_cell_size, grid_cell_size, self.piece_ghost());
                     // Draw shape
                     DrawRectangle(
                         (self.x + pos.x) * grid_cell_size + margin,
@@ -541,6 +599,7 @@ const Game = struct {
         } else {
             for (self.squares) |pos| {
                  self.set_active_state(self.x + pos.x, self.y + pos.y, true);
+                 self.set_grid_color(self.x + pos.x, self.y + pos.y, self.piece_shade());
             }
             self.piece_reset();
             return false;
