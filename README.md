@@ -28,9 +28,6 @@ I'm probably doing this wrong...
 
 ## TODO
 
-- [x] Add README
-- [ ] Add LICENSE
-- [ ] Make repo public
 - [ ] Give each piece has a color
 - [ ] Desaturate colors when they are added to the grid
 - [ ] Make ghost a desaturated tint of current piece color
