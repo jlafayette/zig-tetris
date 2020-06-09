@@ -1,6 +1,9 @@
 # Zig Tetris
 
-Tetris created with zig and raylib. This is a project to play around with zig and learn the language.
+Tetris created with zig and raylib.
+
+Thanks to Not-Nik for the raylib bindings [raylib-zig](https://github.com/Not-Nik/raylib-zig)
+I used this to generate the template for this project (everything in the raylib-zig folder).
 
 ## Requires
 
@@ -21,7 +24,7 @@ Tetris created with zig and raylib. This is a project to play around with zig an
 - Add DLL files to build.zig:<br/>`exe.addLibPath("C:\\raylib\\raylib\\projects\\VS2017\\bin\\x64\\Release.DLL");`
 - `zig build run`
 
-Seems like there should be a better way...
+I'm probably doing this wrong...
 
 ## TODO
 
