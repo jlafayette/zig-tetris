@@ -41,3 +41,5 @@ I'm probably doing this wrong...
 - [ ] Scores
 - [ ] High score
 - [ ] Level up
+- [ ] Add timer so you can't skip past Game Over screen too quick
+- [ ] Freeze space input so you don't pause right away after Start screen

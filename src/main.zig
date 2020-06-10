@@ -1,5 +1,6 @@
 usingnamespace @import("raylib");
 const std = @import("std");
+const math = std.math;
 const warn = std.debug.warn;
 const panic = std.debug.panic;
 
@@ -7,7 +8,8 @@ const grid_width: i32 = 10;
 const grid_height: i32 = 20;
 const grid_cell_size: i32 = 32;
 const margin: i32 = 20;
-const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2);
+const piece_preview_width = grid_cell_size * 5;
+const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2) + piece_preview_width + margin;
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
 fn rgb(r: u8, g: u8, b: u8) Color {
@@ -46,6 +48,21 @@ const Type = enum {
     L,
     J,
 };
+fn piece_color(t: Type) Color {
+    return switch (t) {
+        Type.Cube => rgb(241, 211, 90),
+        Type.Long => rgb(83, 179, 219),
+        Type.L =>    rgb(92, 205, 162),
+        Type.J =>    rgb(231, 111, 124),
+        Type.T =>    rgb(195, 58, 47),
+        Type.S =>    rgb(96, 150, 71),
+        Type.Z =>    rgb(233, 154, 56),
+    };
+}
+fn random_type(rng: *std.rand.DefaultPrng) Type {
+    const index = rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
+    return @intToEnum(Type, index);
+}
 const Rotation = enum {
     A, B, C, D
 };
@@ -60,6 +77,7 @@ const Game = struct {
     rng: std.rand.DefaultPrng,
     state: State,
     t: Type,
+    next_type: Type,
     r: Rotation,
     tick: i32,
     freeze_down: i32,
@@ -80,7 +98,8 @@ const Game = struct {
         const seed = std.mem.readIntLittle(u64, buf[0..8]);
         var r = std.rand.DefaultPrng.init(seed);      
         // squares
-        const t = Type.Cube;
+        const t = random_type(&r);
+        const next_type = random_type(&r);
         var squares = Game.get_squares(t, Rotation.A);
         return Game{
             .grid=grid,
@@ -88,6 +107,7 @@ const Game = struct {
             .rng=r,
             .state=State.StartScreen,
             .t=t,
+            .next_type=next_type,
             .r=Rotation.A,
             .tick=0,
             .freeze_down=0,
@@ -298,24 +318,13 @@ const Game = struct {
     pub fn piece_reset(self: *Game) void {
         self.y = 0;
         self.x = 4;
-        const index = self.rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
-        self.t = @intToEnum(Type, index);
+        self.t = self.next_type;
+        self.next_type = random_type(&self.rng);
         self.r = Rotation.A;
         self.squares = Game.get_squares(self.t, self.r);
         if (self.check_collision(self.squares)) {
             self.state = State.GameOver;
         }
-    }
-    fn piece_color(self: *Game) Color {
-        return switch (self.t) {
-            Type.Cube => rgb(241, 211, 90),
-            Type.Long => rgb(83, 179, 219),
-            Type.L =>    rgb(92, 205, 162),
-            Type.J =>    rgb(231, 111, 124),
-            Type.T =>    rgb(195, 58, 47),
-            Type.S =>    rgb(96, 150, 71),
-            Type.Z =>    rgb(233, 154, 56),
-        };
     }
     fn piece_shade(self: *Game) Color {
         return switch (self.t) {
@@ -381,7 +390,40 @@ const Game = struct {
                     DrawRectangle(
                         (self.x + pos.x) * grid_cell_size + margin,
                         (self.y + pos.y) * grid_cell_size,
-                        grid_cell_size, grid_cell_size, self.piece_color());
+                        grid_cell_size, grid_cell_size, piece_color(self.t));
+                }
+
+                // Draw next piece
+                const far_upper_left = margin + (10 * grid_cell_size) + margin;
+                DrawRectangle(
+                    far_upper_left, margin, piece_preview_width, piece_preview_width, BackgroundColor
+                );
+                const next_squares = switch (self.next_type) {
+                    Type.Long => Game.get_squares(self.next_type, Rotation.B),
+                    else => Game.get_squares(self.next_type, Rotation.A),
+                };
+                var max_x: i32 = 0;
+                var min_x: i32 = 0;
+                var max_y: i32 = 0;
+                var min_y: i32 = 0;
+                for (next_squares) |pos| {
+                    min_x = math.min(min_x, pos.x);
+                    max_x = math.max(max_x, pos.x);
+                    min_y = math.min(min_y, pos.y);
+                    max_y = math.max(max_y, pos.y);
+                }
+                const height = (max_y - min_y + 1) * grid_cell_size;
+                const width = (max_x - min_x + 1) * grid_cell_size;
+                // offset to add to each local pos so that 0,0 is in upper left.
+                const x_offset = min_x * -1;
+                const y_offset = min_y * -1;
+                const x_pixel_offset = @divFloor(piece_preview_width - width, 2);
+                const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
+                for (next_squares) |pos| {
+                    DrawRectangle(
+                        far_upper_left + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
+                        margin + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
+                        grid_cell_size, grid_cell_size, piece_color(self.next_type));
                 }
             },
             else => {},
