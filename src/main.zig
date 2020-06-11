@@ -178,9 +178,9 @@ const Game = struct {
                 if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
                     self.move_left();
                 }
-                if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
+                if (IsKeyPressed(KeyboardKey.KEY_DOWN)) {
                     if (self.freeze_down <= 0) {
-                        const moved = self.move_down();
+                        const moved = self.drop();
                         if (!moved) {
                             self.freeze_down = 60;
                         }
@@ -619,18 +619,36 @@ const Game = struct {
             self.x -= 1;
         }
     }
-    pub fn move_down(self: *Game) bool {
-        const can_move = blk: {
-            for (self.squares) |pos| {
-                const x = self.x + pos.x;
-                const y = self.y + pos.y + 1;
-                if ((y >= grid_height) or self.get_active(x, y)) {
-                    break :blk false;
-                }
+    fn can_move_down(self: *Game) bool {
+        for (self.squares) |pos| {
+            const x = self.x + pos.x;
+            const y = self.y + pos.y + 1;
+            if ((y >= grid_height) or self.get_active(x, y)) {
+                return false;
             }
-            break :blk true;
-        };
-        if (can_move) {
+        }
+        return true;
+    }
+    pub fn drop(self: *Game) bool {
+        // Drop all the way down
+        var moved = false;
+        while (self.can_move_down()) {
+            self.y += 1;
+            moved = true;
+        }
+        if (moved) {
+            return true;
+        } else {
+            for (self.squares) |pos| {
+                self.set_active_state(self.x + pos.x, self.y + pos.y, true);
+                self.set_grid_color(self.x + pos.x, self.y + pos.y, self.piece_shade());
+            }
+            self.piece_reset();
+            return false;
+        }
+    }
+    pub fn move_down(self: *Game) bool {
+        if (self.can_move_down()) {
             self.y += 1;
             return true;
         } else {
