@@ -21,7 +21,7 @@ I used this to generate the template for this project (everything in the raylib-
 
 - Download raylib installer
 - Navigate to `C:\raylib\raylib\projects\VS2017` and build the solution in Visual Studio Code
-- Add DLL files to build.zig:<br/>`exe.addLibPath("C:\\raylib\\raylib\\projects\\VS2017\\bin\\x64\\Release.DLL");`
+- Currently this build directory is hardcoded in build.zig:<br/>`C:/raylib/raylib/projects/VS2017/bin/x64/Release.DLL`
 - `zig build run`
 
 I'm probably doing this wrong...
