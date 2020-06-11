@@ -37,5 +37,5 @@ I'm probably doing this wrong...
 - [ ] Add screenshot or gif to README
 - [ ] Add high score
 - [ ] Level up
-- [ ] Add timer so you can't skip past Game Over screen too quick
-- [ ] Freeze space input so you don't pause right away after Start screen
+- [x] Add timer so you can't skip past Game Over screen too quick
+- [x] Freeze space input so you don't pause right away after Start screen

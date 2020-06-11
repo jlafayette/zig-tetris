@@ -81,6 +81,8 @@ const Game = struct {
     r: Rotation,
     tick: i32,
     freeze_down: i32,
+    freeze_input: i32,
+    freeze_space: i32,
     x: i32,
     y: i32,
     score: usize,
@@ -112,6 +114,8 @@ const Game = struct {
             .r=Rotation.A,
             .tick=0,
             .freeze_down=0,
+            .freeze_input=0,
+            .freeze_space=0,
             .x=4,
             .y=0,
             .score=0
@@ -122,6 +126,7 @@ const Game = struct {
             State.StartScreen => {
                 const k = GetKeyPressed();
                 if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
+                    self.freeze_space = 30;
                     self.state = State.Play;
                 } else {
                     // Seems like some keys don't register with GetKeyPressed, so
@@ -154,7 +159,7 @@ const Game = struct {
                         change = true;
                     }
                 }
-                if (change) {
+                if (change and self.freeze_input == 0) {
                     self.reset();
                     self.piece_reset();
                     self.tick = 0;
@@ -165,7 +170,7 @@ const Game = struct {
             },
             State.Play => {
                 if (
-                    (IsKeyReleased(KeyboardKey.KEY_SPACE)) or
+                    (IsKeyReleased(KeyboardKey.KEY_SPACE) and self.freeze_space == 0) or
                     (IsKeyReleased(KeyboardKey.KEY_P))
                 ) {
                     self.state = State.Pause;
@@ -197,9 +202,6 @@ const Game = struct {
                     self.tick = 0;
                 }
                 self.tick += 1;
-                if (self.freeze_down > 0) {
-                    self.freeze_down -= 1;
-                }
             },
             State.Pause => {
                 if (
@@ -212,6 +214,15 @@ const Game = struct {
             else => {
                 self.state = State.Play;
             },
+        }
+        if (self.freeze_down > 0) {
+            self.freeze_down -= 1;
+        }
+        if (self.freeze_space > 0) {
+            self.freeze_space -= 1;
+        }
+        if (self.freeze_input > 0) {
+            self.freeze_input -= 1;
         }
     }
     fn row_is_full(self: Game, y: i32) bool {
@@ -329,6 +340,7 @@ const Game = struct {
         self.squares = Game.get_squares(self.t, self.r);
         if (self.check_collision(self.squares)) {
             self.state = State.GameOver;
+            self.freeze_input = 60;  // Keep player from mashing keys at end and skipping the game over screen.
         }
     }
     fn piece_shade(self: *Game) Color {
