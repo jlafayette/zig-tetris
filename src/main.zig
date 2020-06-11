@@ -83,6 +83,7 @@ const Game = struct {
     freeze_down: i32,
     x: i32,
     y: i32,
+    score: usize,
 
     pub fn init() Game {
         // grid
@@ -113,6 +114,7 @@ const Game = struct {
             .freeze_down=0,
             .x=4,
             .y=0,
+            .score=0
         };
     }
     pub fn update(self: *Game) void {
@@ -349,92 +351,100 @@ const Game = struct {
         };
     }
     pub fn draw(self: *Game) void {
-        switch (self.state) {
-            State.StartScreen => {
-                ClearBackground(WHITE);
-                DrawText("TETRIS", 75, screen_height / 2 - 50, 50, BLACK);
-                DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
-            },
-            State.Play, State.Pause, State.GameOver => {
-                ClearBackground(BorderColor);
-                var y: i32 = 0;
-                var upper_left_y: i32 = 0;
-                while (y < grid_height) {
-                    var x: i32 = 0;
-                    var upper_left_x: i32 = margin;
-                    while (x < grid_width) {
 
-                        if (self.get_active(x, y)) {
-                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
-                        } else {
-                            DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, BackgroundHiLightColor);
-                            DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
-                        }
+        ClearBackground(BorderColor);
+        var y: i32 = 0;
+        var upper_left_y: i32 = 0;
+        while (y < grid_height) {
+            var x: i32 = 0;
+            var upper_left_x: i32 = margin;
+            while (x < grid_width) {
 
-                        upper_left_x += grid_cell_size; 
-                        x += 1;
-                    }
-                    upper_left_y += grid_cell_size;
-                    y += 1;
+                if (self.get_active(x, y)) {
+                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
+                } else {
+                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, BackgroundHiLightColor);
+                    DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
                 }
 
-                // Draw falling piece and ghost
-                const ghost_square_offset = self.get_ghost_square_offset();
-                for (self.squares) |pos| {
-                    // Draw ghost
-                    DrawRectangle(
-                        (self.x + pos.x) * grid_cell_size + margin,
-                        (self.y + ghost_square_offset + pos.y) * grid_cell_size,
-                        grid_cell_size, grid_cell_size, self.piece_ghost());
-                    // Draw shape
-                    DrawRectangle(
-                        (self.x + pos.x) * grid_cell_size + margin,
-                        (self.y + pos.y) * grid_cell_size,
-                        grid_cell_size, grid_cell_size, piece_color(self.t));
-                }
-
-                // Draw next piece
-                const far_upper_left = margin + (10 * grid_cell_size) + margin;
-                DrawRectangle(
-                    far_upper_left, margin, piece_preview_width, piece_preview_width, BackgroundColor
-                );
-                const next_squares = switch (self.next_type) {
-                    Type.Long => Game.get_squares(self.next_type, Rotation.B),
-                    else => Game.get_squares(self.next_type, Rotation.A),
-                };
-                var max_x: i32 = 0;
-                var min_x: i32 = 0;
-                var max_y: i32 = 0;
-                var min_y: i32 = 0;
-                for (next_squares) |pos| {
-                    min_x = math.min(min_x, pos.x);
-                    max_x = math.max(max_x, pos.x);
-                    min_y = math.min(min_y, pos.y);
-                    max_y = math.max(max_y, pos.y);
-                }
-                const height = (max_y - min_y + 1) * grid_cell_size;
-                const width = (max_x - min_x + 1) * grid_cell_size;
-                // offset to add to each local pos so that 0,0 is in upper left.
-                const x_offset = min_x * -1;
-                const y_offset = min_y * -1;
-                const x_pixel_offset = @divFloor(piece_preview_width - width, 2);
-                const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
-                for (next_squares) |pos| {
-                    DrawRectangle(
-                        far_upper_left + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
-                        margin + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
-                        grid_cell_size, grid_cell_size, piece_color(self.next_type));
-                }
-            },
-            else => {},
+                upper_left_x += grid_cell_size; 
+                x += 1;
+            }
+            upper_left_y += grid_cell_size;
+            y += 1;
         }
+
+        if (self.state != State.StartScreen) {
+            // Draw falling piece and ghost
+            const ghost_square_offset = self.get_ghost_square_offset();
+            for (self.squares) |pos| {
+                // Draw ghost
+                DrawRectangle(
+                    (self.x + pos.x) * grid_cell_size + margin,
+                    (self.y + ghost_square_offset + pos.y) * grid_cell_size,
+                    grid_cell_size, grid_cell_size, self.piece_ghost());
+                // Draw shape
+                DrawRectangle(
+                    (self.x + pos.x) * grid_cell_size + margin,
+                    (self.y + pos.y) * grid_cell_size,
+                    grid_cell_size, grid_cell_size, piece_color(self.t));
+            }
+        }
+        
+
+        // Draw next piece
+        const far_upper_left = margin + (10 * grid_cell_size) + margin;
+        DrawRectangle(
+            far_upper_left, margin, piece_preview_width, piece_preview_width, BackgroundColor
+        );
+        if (self.state != State.StartScreen) {
+            const next_squares = switch (self.next_type) {
+                Type.Long => Game.get_squares(self.next_type, Rotation.B),
+                else => Game.get_squares(self.next_type, Rotation.A),
+            };
+            var max_x: i32 = 0;
+            var min_x: i32 = 0;
+            var max_y: i32 = 0;
+            var min_y: i32 = 0;
+            for (next_squares) |pos| {
+                min_x = math.min(min_x, pos.x);
+                max_x = math.max(max_x, pos.x);
+                min_y = math.min(min_y, pos.y);
+                max_y = math.max(max_y, pos.y);
+            }
+            const height = (max_y - min_y + 1) * grid_cell_size;
+            const width = (max_x - min_x + 1) * grid_cell_size;
+            // offset to add to each local pos so that 0,0 is in upper left.
+            const x_offset = min_x * -1;
+            const y_offset = min_y * -1;
+            const x_pixel_offset = @divFloor(piece_preview_width - width, 2);
+            const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
+            for (next_squares) |pos| {
+                DrawRectangle(
+                    far_upper_left + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
+                    margin + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
+                    grid_cell_size, grid_cell_size, piece_color(self.next_type));
+            }
+        }
+        
+        if (self.state == State.Pause or self.state == State.GameOver or self.state == State.StartScreen) {
+            DrawRectangle(
+                0, (screen_height / 2) - 70,
+                screen_width, 110, rgba(3, 2, 1, 100)
+            );
+        }
+
         if (self.state == State.Pause) {
-            DrawText("PAUSED", 75, screen_height / 2 - 50, 50, BLACK);
-            DrawText("Press SPACE to unpause", 50, screen_height / 2, 20, DARKGRAY);
+            DrawText("PAUSED", 75, screen_height / 2 - 50, 50, WHITE);
+            DrawText("Press SPACE to unpause", 50, screen_height / 2, 20, LIGHTGRAY);
         }
         if (self.state == State.GameOver) {
-            DrawText("GAME OVER", 45, screen_height / 2 - 50, 42, BLACK);
-            DrawText("Press any key to continue", 41, screen_height / 2, 20, DARKGRAY);
+            DrawText("GAME OVER", 45, screen_height / 2 - 50, 42, WHITE);
+            DrawText("Press any key to continue", 41, screen_height / 2, 20, LIGHTGRAY);
+        }
+        if (self.state == State.StartScreen) {
+            DrawText("TETRIS", 75, screen_height / 2 - 50, 50, WHITE);
+            DrawText("Press any key to continue", 41, screen_height / 2, 20, LIGHTGRAY);
         }
     }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {

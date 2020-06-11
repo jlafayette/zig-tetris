@@ -31,7 +31,7 @@ I'm probably doing this wrong...
 - [x] Give each piece a color
 - [x] Desaturate colors when they are added to the grid
 - [x] Make ghost a desaturated tint of current piece color
-- [ ] Show preview of next piece
+- [x] Show preview of next piece
 - [ ] Display controls on the start and pause screens
 - [ ] Add difficulty? maybe faster ticks, junk rows
 - [ ] Add score
