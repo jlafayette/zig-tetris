@@ -6,8 +6,12 @@ pub fn build(b: *Builder) void {
     const exe = b.addExecutable("Tetris", "src/main.zig");
     exe.setBuildMode(mode);
 
-    // TODO: Check for windows target before adding this.
-    // exe.addLibPath("C:\\raylib\\raylib\\projects\\VS2017\\bin\\x64\\Release.DLL");
+    // TODO: Make this path an argument that can be passed into build command
+    if (exe.target.isWindows()) {
+        exe.addLibPath("C:/raylib/raylib/projects/VS2017/bin/x64/Release.DLL");
+        const raylib_dll = "C:/raylib/raylib/projects/VS2017/bin/x64/Release.DLL/raylib.dll";
+        b.installFile(raylib_dll, "bin/raylib.dll");
+    }
 
     exe.linkSystemLibrary("raylib");
     exe.addPackagePath("raylib", "raylib-zig/raylib-zig.zig");
