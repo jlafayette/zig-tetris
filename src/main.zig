@@ -13,15 +13,14 @@ const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2) + piece_p
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
 fn rgb(r: u8, g: u8, b: u8) Color {
-    return Color{ .r=r, .g=g, .b=b, .a=255 };
+    return Color{ .r = r, .g = g, .b = b, .a = 255 };
 }
 fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
-    return Color{ .r=r, .g=g, .b=b, .a=a };
+    return Color{ .r = r, .g = g, .b = b, .a = a };
 }
 const BackgroundColor = rgb(29, 38, 57);
 const BackgroundHiLightColor = rgb(39, 48, 67);
 const BorderColor = rgb(3, 2, 1);
-
 
 const State = enum {
     StartScreen,
@@ -36,7 +35,7 @@ const Pos = struct {
 };
 
 fn p(x: i32, y: i32) Pos {
-    return Pos{ .x=x, .y=y };
+    return Pos{ .x = x, .y = y };
 }
 
 const Type = enum {
@@ -52,11 +51,11 @@ fn piece_color(t: Type) Color {
     return switch (t) {
         Type.Cube => rgb(241, 211, 90),
         Type.Long => rgb(83, 179, 219),
-        Type.L =>    rgb(92, 205, 162),
-        Type.J =>    rgb(231, 111, 124),
-        Type.T =>    rgb(195, 58, 47),
-        Type.S =>    rgb(96, 150, 71),
-        Type.Z =>    rgb(233, 154, 56),
+        Type.L => rgb(92, 205, 162),
+        Type.J => rgb(231, 111, 124),
+        Type.T => rgb(195, 58, 47),
+        Type.S => rgb(96, 150, 71),
+        Type.Z => rgb(233, 154, 56),
     };
 }
 fn random_type(rng: *std.rand.DefaultPrng) Type {
@@ -91,7 +90,7 @@ const Game = struct {
         // grid
         var grid: [grid_width * grid_height]Square = undefined;
         for (grid) |*item, i| {
-            item.* = Square{ .color=WHITE, .active=false };
+            item.* = Square{ .color = WHITE, .active = false };
         }
         // rng
         var buf: [8]u8 = undefined;
@@ -99,26 +98,26 @@ const Game = struct {
             panic("unable to seed random number generator: {}", .{err});
         };
         const seed = std.mem.readIntLittle(u64, buf[0..8]);
-        var r = std.rand.DefaultPrng.init(seed);      
+        var r = std.rand.DefaultPrng.init(seed);
         // squares
         const t = random_type(&r);
         const next_type = random_type(&r);
         var squares = Game.get_squares(t, Rotation.A);
         return Game{
-            .grid=grid,
-            .squares=squares,
-            .rng=r,
-            .state=State.StartScreen,
-            .t=t,
-            .next_type=next_type,
-            .r=Rotation.A,
-            .tick=0,
-            .freeze_down=0,
-            .freeze_input=0,
-            .freeze_space=0,
-            .x=4,
-            .y=0,
-            .score=0
+            .grid = grid,
+            .squares = squares,
+            .rng = r,
+            .state = State.StartScreen,
+            .t = t,
+            .next_type = next_type,
+            .r = Rotation.A,
+            .tick = 0,
+            .freeze_down = 0,
+            .freeze_input = 0,
+            .freeze_space = 0,
+            .x = 4,
+            .y = 0,
+            .score = 0,
         };
     }
     pub fn update(self: *Game) void {
@@ -131,13 +130,12 @@ const Game = struct {
                 } else {
                     // Seems like some keys don't register with GetKeyPressed, so
                     // checking for them manually here.
-                    if (
-                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                    if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
                         IsKeyReleased(KeyboardKey.KEY_LEFT) or
                         IsKeyReleased(KeyboardKey.KEY_RIGHT) or
                         IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_ENTER)
-                    ) {
+                        IsKeyReleased(KeyboardKey.KEY_ENTER))
+                    {
                         self.state = State.Play;
                     }
                 }
@@ -149,13 +147,12 @@ const Game = struct {
                 } else {
                     // Seems like some keys don't register with GetKeyPressed, so
                     // checking for them manually here.
-                    if (
-                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                    if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
                         IsKeyReleased(KeyboardKey.KEY_LEFT) or
                         IsKeyReleased(KeyboardKey.KEY_RIGHT) or
                         IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_ENTER)
-                    ) {
+                        IsKeyReleased(KeyboardKey.KEY_ENTER))
+                    {
                         change = true;
                     }
                 }
@@ -169,10 +166,9 @@ const Game = struct {
                 }
             },
             State.Play => {
-                if (
-                    (IsKeyReleased(KeyboardKey.KEY_SPACE) and self.freeze_space == 0) or
-                    (IsKeyReleased(KeyboardKey.KEY_P))
-                ) {
+                if ((IsKeyReleased(KeyboardKey.KEY_SPACE) and self.freeze_space == 0) or
+                    (IsKeyReleased(KeyboardKey.KEY_P)))
+                {
                     self.state = State.Pause;
                     return;
                 }
@@ -204,10 +200,9 @@ const Game = struct {
                 self.tick += 1;
             },
             State.Pause => {
-                if (
-                    (IsKeyReleased(KeyboardKey.KEY_SPACE)) or
-                    (IsKeyReleased(KeyboardKey.KEY_P))
-                ) {
+                if ((IsKeyReleased(KeyboardKey.KEY_SPACE)) or
+                    (IsKeyReleased(KeyboardKey.KEY_P)))
+                {
                     self.state = State.Play;
                 }
             },
@@ -239,11 +234,11 @@ const Game = struct {
     }
     fn copy_row(self: *Game, y1: i32, y2: i32) void {
         if (y1 == y2) {
-            warn("Invalid copy, {} must not equal {}\n", .{y1, y2});
+            warn("Invalid copy, {} must not equal {}\n", .{ y1, y2 });
             return;
         }
         if (y2 < 0 or y1 >= grid_height or y2 >= grid_height) {
-            warn("Invalid copy, {} or {} is out of bounds\n", .{y1, y2});
+            warn("Invalid copy, {} or {} is out of bounds\n", .{ y1, y2 });
             return;
         }
         var x: i32 = 0;
@@ -260,7 +255,7 @@ const Game = struct {
     fn copy_rows(self: *Game, src_y: i32, dst_y: i32) void {
         // Starting at dest row, copy everything above, but starting at dest
         if (src_y >= dst_y) {
-            warn("{} must be less than {}\n", .{src_y, dst_y});
+            warn("{} must be less than {}\n", .{ src_y, dst_y });
             return;
         }
         var y1: i32 = src_y;
@@ -289,8 +284,12 @@ const Game = struct {
         }
     }
     pub fn get_active(self: Game, x: i32, y: i32) bool {
-        if (x < 0) { return true; }
-        if (y < 0) { return false; }
+        if (x < 0) {
+            return true;
+        }
+        if (y < 0) {
+            return false;
+        }
         const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
         if (index >= self.grid.len) {
             return true;
@@ -298,8 +297,12 @@ const Game = struct {
         return self.grid[index].active;
     }
     pub fn get_grid_color(self: Game, x: i32, y: i32) Color {
-        if (x < 0) { return LIGHTGRAY; }
-        if (y < 0) { return WHITE; }
+        if (x < 0) {
+            return LIGHTGRAY;
+        }
+        if (y < 0) {
+            return WHITE;
+        }
         const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
         if (index >= self.grid.len) {
             return LIGHTGRAY;
@@ -328,7 +331,7 @@ const Game = struct {
     }
     pub fn reset(self: *Game) void {
         for (self.grid) |*item, i| {
-            item.* = Square{ .color=WHITE, .active=false };
+            item.* = Square{ .color = WHITE, .active = false };
         }
     }
     pub fn piece_reset(self: *Game) void {
@@ -340,33 +343,32 @@ const Game = struct {
         self.squares = Game.get_squares(self.t, self.r);
         if (self.check_collision(self.squares)) {
             self.state = State.GameOver;
-            self.freeze_input = 60;  // Keep player from mashing keys at end and skipping the game over screen.
+            self.freeze_input = 60; // Keep player from mashing keys at end and skipping the game over screen.
         }
     }
     fn piece_shade(self: *Game) Color {
         return switch (self.t) {
             Type.Cube => rgb(241, 211, 90),
             Type.Long => rgb(83, 179, 219),
-            Type.L =>    rgb(92, 205, 162),
-            Type.J =>    rgb(231, 111, 124),
-            Type.T =>    rgb(195, 58, 47),
-            Type.S =>    rgb(96, 150, 71),
-            Type.Z =>    rgb(233, 154, 56),
+            Type.L => rgb(92, 205, 162),
+            Type.J => rgb(231, 111, 124),
+            Type.T => rgb(195, 58, 47),
+            Type.S => rgb(96, 150, 71),
+            Type.Z => rgb(233, 154, 56),
         };
     }
     fn piece_ghost(self: *Game) Color {
         return switch (self.t) {
             Type.Cube => rgba(241, 211, 90, 175),
             Type.Long => rgba(83, 179, 219, 175),
-            Type.L =>    rgba(92, 205, 162, 175),
-            Type.J =>    rgba(231, 111, 124, 175),
-            Type.T =>    rgba(195, 58, 47, 175),
-            Type.S =>    rgba(96, 150, 71, 175),
-            Type.Z =>    rgba(233, 154, 56, 175),
+            Type.L => rgba(92, 205, 162, 175),
+            Type.J => rgba(231, 111, 124, 175),
+            Type.T => rgba(195, 58, 47, 175),
+            Type.S => rgba(96, 150, 71, 175),
+            Type.Z => rgba(233, 154, 56, 175),
         };
     }
     pub fn draw(self: *Game) void {
-
         ClearBackground(BorderColor);
         var y: i32 = 0;
         var upper_left_y: i32 = 0;
@@ -374,7 +376,6 @@ const Game = struct {
             var x: i32 = 0;
             var upper_left_x: i32 = margin;
             while (x < grid_width) {
-
                 if (self.get_active(x, y)) {
                     DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
                 } else {
@@ -382,7 +383,7 @@ const Game = struct {
                     DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
                 }
 
-                upper_left_x += grid_cell_size; 
+                upper_left_x += grid_cell_size;
                 x += 1;
             }
             upper_left_y += grid_cell_size;
@@ -394,20 +395,14 @@ const Game = struct {
             const ghost_square_offset = self.get_ghost_square_offset();
             for (self.squares) |pos| {
                 // Draw ghost
-                DrawRectangle(
-                    (self.x + pos.x) * grid_cell_size + margin,
-                    (self.y + ghost_square_offset + pos.y) * grid_cell_size,
-                    grid_cell_size, grid_cell_size, self.piece_ghost());
+                DrawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + ghost_square_offset + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, self.piece_ghost());
                 // Draw shape
-                DrawRectangle(
-                    (self.x + pos.x) * grid_cell_size + margin,
-                    (self.y + pos.y) * grid_cell_size,
-                    grid_cell_size, grid_cell_size, piece_color(self.t));
+                DrawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, piece_color(self.t));
             }
         }
-        
+
         const right_bar = margin + (10 * grid_cell_size) + margin;
-        var draw_height = margin;  // Track where to start drawing the next item
+        var draw_height = margin; // Track where to start drawing the next item
         // Draw score
         DrawText("Score:", right_bar, draw_height, 20, LIGHTGRAY);
         draw_height += 20;
@@ -418,9 +413,7 @@ const Game = struct {
 
         // Draw next piece
         draw_height += margin;
-        DrawRectangle(
-            right_bar, draw_height, piece_preview_width, piece_preview_width, BackgroundColor
-        );
+        DrawRectangle(right_bar, draw_height, piece_preview_width, piece_preview_width, BackgroundColor);
         if (self.state != State.StartScreen) {
             const next_squares = switch (self.next_type) {
                 Type.Long => Game.get_squares(self.next_type, Rotation.B),
@@ -444,21 +437,14 @@ const Game = struct {
             const x_pixel_offset = @divFloor(piece_preview_width - width, 2);
             const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
             for (next_squares) |pos| {
-                DrawRectangle(
-                    right_bar + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
-                    draw_height + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
-                    grid_cell_size, grid_cell_size, piece_color(self.next_type));
+                DrawRectangle(right_bar + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size), draw_height + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size), grid_cell_size, grid_cell_size, piece_color(self.next_type));
             }
         }
         draw_height += piece_preview_width;
 
-        
         if (self.state == State.Pause or self.state == State.GameOver or self.state == State.StartScreen) {
             // Partially transparent background to give text better contrast if drawn over the grid
-            DrawRectangle(
-                0, (screen_height / 2) - 70,
-                screen_width, 110, rgba(3, 2, 1, 100)
-            );
+            DrawRectangle(0, (screen_height / 2) - 70, screen_width, 110, rgba(3, 2, 1, 100));
         }
 
         if (self.state == State.Pause) {
@@ -477,100 +463,72 @@ const Game = struct {
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
         return switch (t) {
             Type.Cube => [_]Pos{
-                    p(0, 0), p(1, 0),
-                    p(0, 1), p(1, 1)
-                },
+                p(0, 0), p(1, 0), p(0, 1), p(1, 1),
+            },
             Type.Long => switch (r) {
                 Rotation.A, Rotation.C => [_]Pos{
-                    p(-1, 0), p(0, 0), p(1, 0), p(2, 0)
+                    p(-1, 0), p(0, 0), p(1, 0), p(2, 0),
                 },
                 Rotation.B, Rotation.D => [_]Pos{
-                    p(0,-1),
-                    p(0, 0),
-                    p(0, 1),
-                    p(0, 2)
+                    p(0, -1), p(0, 0), p(0, 1), p(0, 2),
                 },
             },
             Type.Z => switch (r) {
                 Rotation.A, Rotation.C => [_]Pos{
-                    p(-1, 0), p(0, 0),
-                              p(0, 1), p(1, 1)
+                    p(-1, 0), p(0, 0), p(0, 1), p(1, 1),
                 },
                 Rotation.B, Rotation.D => [_]Pos{
-                              p(0, -1),
-                    p(-1, 0), p(0,  0),
-                    p(-1, 1)
+                    p(0, -1), p(-1, 0), p(0, 0), p(-1, 1),
                 },
             },
             Type.S => switch (r) {
                 Rotation.A, Rotation.C => [_]Pos{
-                              p(0, 0), p(1, 0),
-                    p(-1, 1), p(0, 1)
+                    p(0, 0), p(1, 0), p(-1, 1), p(0, 1),
                 },
                 Rotation.B, Rotation.D => [_]Pos{
-                    p(0,-1),
-                    p(0, 0), p(1, 0),
-                             p(1, 1)
+                    p(0, -1), p(0, 0), p(1, 0), p(1, 1),
                 },
             },
             Type.T => switch (r) {
-                Rotation.A, => [_]Pos{
-                              p(0,-1), 
-                    p(-1, 0), p(0, 0), p(1, 0),
+                Rotation.A => [_]Pos{
+                    p(0, -1), p(-1, 0), p(0, 0), p(1, 0),
                 },
                 Rotation.B => [_]Pos{
-                    p(0,-1),
-                    p(0, 0), p(1, 0),
-                    p(0, 1)
+                    p(0, -1), p(0, 0), p(1, 0), p(0, 1),
                 },
-                Rotation.C, => [_]Pos{
-                    p(-1, 0), p(0, 0), p(1, 0),
-                              p(0, 1), 
+                Rotation.C => [_]Pos{
+                    p(-1, 0), p(0, 0), p(1, 0), p(0, 1),
                 },
                 Rotation.D => [_]Pos{
-                              p(0,-1),
-                    p(-1, 0), p(0, 0),
-                              p(0, 1)
+                    p(0, -1), p(-1, 0), p(0, 0), p(0, 1),
                 },
             },
             Type.L => switch (r) {
                 Rotation.A => [_]Pos{
-                    p(0,-1),
-                    p(0, 0),
-                    p(0, 1), p(1, 1),
+                    p(0, -1), p(0, 0), p(0, 1), p(1, 1),
                 },
                 Rotation.B => [_]Pos{
-                    p(-1, 0), p(0, 0), p(1, 0),
-                    p(-1, 1),
+                    p(-1, 0), p(0, 0), p(1, 0), p(-1, 1),
                 },
                 Rotation.C => [_]Pos{
-                    p(-1,-1), p(0,-1),
-                              p(0, 0),
-                              p(0, 1),
+                    p(-1, -1), p(0, -1), p(0, 0), p(0, 1),
                 },
                 Rotation.D => [_]Pos{
-                                       p(1,-1),
-                    p(-1, 0), p(0, 0), p(1, 0),
+                    p(1, -1), p(-1, 0), p(0, 0), p(1, 0),
                 },
             },
             Type.J => switch (r) {
                 Rotation.A => [_]Pos{
-                              p(0,-1),
-                              p(0, 0),
-                    p(-1, 1), p(0, 1),
+                    p(0, -1), p(0, 0), p(-1, 1), p(0, 1),
                 },
                 Rotation.B => [_]Pos{
-                    p(-1,-1),
-                    p(-1, 0), p(0, 0), p(1, 0),
+                    p(-1, -1), p(-1, 0), p(0, 0), p(1, 0),
                 },
                 Rotation.C => [_]Pos{
-                    p(0,-1), p(1,-1),
-                    p(0, 0),
-                    p(0, 1),
+                    p(0, -1), p(1, -1), p(0, 0), p(0, 1),
                 },
                 Rotation.D => [_]Pos{
-                    p(-1, 0), p(0, 0), p(1, 0),
-                                       p(1, 1)
+                    p(-1, 0), p(0, 0), p(1, 0), p(1, 1),
                 },
             },
         };
@@ -597,7 +555,7 @@ const Game = struct {
             // Try moving left or right by one or two squares. This helps when trying
             // to rotate when right next to the wall or another block. Esp noticable
             // on the 4x1 (Long) type.
-            const x_offsets = [_]i32 { 1, -1, 2, -2 };
+            const x_offsets = [_]i32{ 1, -1, 2, -2 };
             for (x_offsets) |x_offset| {
                 if (!self.check_collision_offset(x_offset, 0, squares)) {
                     self.x += x_offset;
@@ -677,8 +635,8 @@ const Game = struct {
             return true;
         } else {
             for (self.squares) |pos| {
-                 self.set_active_state(self.x + pos.x, self.y + pos.y, true);
-                 self.set_grid_color(self.x + pos.x, self.y + pos.y, self.piece_shade());
+                self.set_active_state(self.x + pos.x, self.y + pos.y, true);
+                self.set_grid_color(self.x + pos.x, self.y + pos.y, self.piece_shade());
             }
             self.piece_reset();
             return false;
@@ -686,8 +644,7 @@ const Game = struct {
     }
 };
 
-pub fn main() anyerror!void
-{
+pub fn main() anyerror!void {
     // Initialization
     var game = Game.init();
     InitWindow(screen_width, screen_height, "Tetris");
@@ -700,11 +657,11 @@ pub fn main() anyerror!void
     SetTextureFilter(GetFontDefault().texture, @enumToInt(TextureFilterMode.FILTER_POINT));
 
     // Main game loop
-    while (!WindowShouldClose())  // Detect window close button or ESC key
-    {
+    while (!WindowShouldClose()) // Detect window close button or ESC key
+        {
         game.update();
         BeginDrawing();
-            game.draw();
+        game.draw();
         EndDrawing();
     }
 }
