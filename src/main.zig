@@ -158,6 +158,8 @@ const Game = struct {
                     self.reset();
                     self.piece_reset();
                     self.tick = 0;
+                    // TODO: Add High Score screen.
+                    self.score = 0;
                     self.state = State.Play;
                 }
             },
@@ -265,6 +267,7 @@ const Game = struct {
         while (y > -1) {
             if (self.row_is_full(y)) {
                 while (self.row_is_full(cp_y)) {
+                    self.score += 1;
                     cp_y -= 1;
                 }
                 self.copy_rows(cp_y, y);
@@ -391,11 +394,20 @@ const Game = struct {
             }
         }
         
+        const right_bar = margin + (10 * grid_cell_size) + margin;
+        var draw_height = margin;  // Track where to start drawing the next item
+        // Draw score
+        DrawText("Score:", right_bar, draw_height, 20, LIGHTGRAY);
+        draw_height += 20;
+        var score_text_buf = [_]u8{0} ** 20;
+        const score_text = std.fmt.bufPrint(score_text_buf[0..], "{}", .{self.score}) catch unreachable;
+        DrawText(@ptrCast([*c]const u8, score_text[0..1]), right_bar, draw_height, 20, LIGHTGRAY);
+        draw_height += 20;
 
         // Draw next piece
-        const far_upper_left = margin + (10 * grid_cell_size) + margin;
+        draw_height += margin;
         DrawRectangle(
-            far_upper_left, margin, piece_preview_width, piece_preview_width, BackgroundColor
+            right_bar, draw_height, piece_preview_width, piece_preview_width, BackgroundColor
         );
         if (self.state != State.StartScreen) {
             const next_squares = switch (self.next_type) {
@@ -421,13 +433,16 @@ const Game = struct {
             const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
             for (next_squares) |pos| {
                 DrawRectangle(
-                    far_upper_left + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
-                    margin + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
+                    right_bar + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size),
+                    draw_height + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size),
                     grid_cell_size, grid_cell_size, piece_color(self.next_type));
             }
         }
+        draw_height += piece_preview_width;
+
         
         if (self.state == State.Pause or self.state == State.GameOver or self.state == State.StartScreen) {
+            // Partially transparent background to give text better contrast if drawn over the grid
             DrawRectangle(
                 0, (screen_height / 2) - 70,
                 screen_width, 110, rgba(3, 2, 1, 100)
