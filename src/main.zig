@@ -167,9 +167,9 @@ const Game = struct {
                 if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
                     self.move_left();
                 }
-                if (IsKeyPressed(KeyboardKey.KEY_DOWN)) {
+                if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
                     if (self.freeze_down <= 0) {
-                        const moved = self.drop();
+                        const moved = self.move_down();
                         if (!moved) {
                             self.freeze_down = 60;
                         }
@@ -177,6 +177,12 @@ const Game = struct {
                 }
                 if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
                     self.freeze_down = 0;
+                }
+                if (IsKeyPressed(KeyboardKey.KEY_RIGHT_CONTROL) or IsKeyPressed(KeyboardKey.KEY_SPACE)) {
+                    const moved = self.drop();
+                    if (!moved) {
+                        self.freeze_down = 60;
+                    }
                 }
                 if (IsKeyPressed(KeyboardKey.KEY_UP)) {
                     self.rotate();
