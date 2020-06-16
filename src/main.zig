@@ -120,43 +120,34 @@ const Game = struct {
             .score = 0,
         };
     }
+    fn anykey(self: *Game) bool {
+        const k = GetKeyPressed();
+        if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
+            return true;
+        } else {
+            // Seems like some keys don't register with GetKeyPressed, so
+            // checking for them manually here.
+            if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                IsKeyReleased(KeyboardKey.KEY_LEFT) or
+                IsKeyReleased(KeyboardKey.KEY_RIGHT) or
+                IsKeyReleased(KeyboardKey.KEY_DOWN) or
+                IsKeyReleased(KeyboardKey.KEY_ENTER))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
     pub fn update(self: *Game) void {
         switch (self.state) {
             State.StartScreen => {
-                const k = GetKeyPressed();
-                if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
+                if (self.anykey()) {
                     self.freeze_space = 30;
                     self.state = State.Play;
-                } else {
-                    // Seems like some keys don't register with GetKeyPressed, so
-                    // checking for them manually here.
-                    if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_LEFT) or
-                        IsKeyReleased(KeyboardKey.KEY_RIGHT) or
-                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_ENTER))
-                    {
-                        self.state = State.Play;
-                    }
                 }
             },
             State.GameOver => {
-                var change: bool = false;
-                if (GetKeyPressed() != @enumToInt(KeyboardKey.KEY_NULL)) {
-                    change = true;
-                } else {
-                    // Seems like some keys don't register with GetKeyPressed, so
-                    // checking for them manually here.
-                    if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_LEFT) or
-                        IsKeyReleased(KeyboardKey.KEY_RIGHT) or
-                        IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                        IsKeyReleased(KeyboardKey.KEY_ENTER))
-                    {
-                        change = true;
-                    }
-                }
-                if (change and self.freeze_input == 0) {
+                if (self.anykey() and self.freeze_input == 0) {
                     self.reset();
                     self.piece_reset();
                     self.tick = 0;
@@ -166,9 +157,7 @@ const Game = struct {
                 }
             },
             State.Play => {
-                if ((IsKeyReleased(KeyboardKey.KEY_SPACE) and self.freeze_space == 0) or
-                    (IsKeyReleased(KeyboardKey.KEY_P)))
-                {
+                if (IsKeyReleased(KeyboardKey.KEY_ESCAPE)) {
                     self.state = State.Pause;
                     return;
                 }
@@ -200,9 +189,7 @@ const Game = struct {
                 self.tick += 1;
             },
             State.Pause => {
-                if ((IsKeyReleased(KeyboardKey.KEY_SPACE)) or
-                    (IsKeyReleased(KeyboardKey.KEY_P)))
-                {
+                if (IsKeyReleased(KeyboardKey.KEY_ESCAPE)) {
                     self.state = State.Play;
                 }
             },
@@ -449,7 +436,7 @@ const Game = struct {
 
         if (self.state == State.Pause) {
             DrawText("PAUSED", 75, screen_height / 2 - 50, 50, WHITE);
-            DrawText("Press SPACE to unpause", 50, screen_height / 2, 20, LIGHTGRAY);
+            DrawText("Press ESCAPE to unpause", 45, screen_height / 2, 20, LIGHTGRAY);
         }
         if (self.state == State.GameOver) {
             DrawText("GAME OVER", 45, screen_height / 2 - 50, 42, WHITE);
@@ -667,6 +654,9 @@ pub fn main() anyerror!void {
     var game = Game.init();
     InitWindow(screen_width, screen_height, "Tetris");
     defer CloseWindow();
+
+    // Default is Escape, but we want to use that for pause instead
+    SetExitKey(KeyboardKey.KEY_F4);
 
     // Set the game to run at 60 frames-per-second
     SetTargetFPS(60);

@@ -37,7 +37,7 @@ I'm probably doing this wrong...
 - [ ] Add high score
 - [ ] Level up
 - [ ] (Difficulty) Slowly reduce likelyhood of pieces that are helpful
-- [ ] Change escape to pause
+- [x] Change escape to pause
 - [ ] Space, Ctrl should be drop, down arrow fast down
 - [ ] Throw in large shapes! (with countdown til arrival)
 - [ ] Add AI oppenent
