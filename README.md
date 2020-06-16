@@ -41,3 +41,5 @@ I'm probably doing this wrong...
 - [ ] Space, Ctrl should be drop, down arrow fast down
 - [ ] Throw in large shapes! (with countdown til arrival)
 - [ ] Add AI oppenent
+- [ ] Flash combo scores / multipliers
+- [ ] Online play
