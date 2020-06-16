@@ -28,14 +28,16 @@ I'm probably doing this wrong...
 
 ## TODO
 
-- [x] Show preview of next piece
 - [ ] Display controls on the start and pause screens
 - [ ] Add difficulty? maybe faster ticks, junk rows
 - [x] Add score
 - [ ] Add sound
-- [ ] Add two player coop or competition mode?
+- [ ] Add two player coop or competition mode
 - [ ] Add screenshot or gif to README
 - [ ] Add high score
 - [ ] Level up
-- [x] Add timer so you can't skip past Game Over screen too quick
-- [x] Freeze space input so you don't pause right away after Start screen
+- [ ] (Difficulty) Slowly reduce likelyhood of pieces that are helpful
+- [ ] Change escape to pause
+- [ ] Space, Ctrl should be drop, down arrow fast down
+- [ ] Throw in large shapes! (with countdown til arrival)
+- [ ] Add AI oppenent
