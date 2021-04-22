@@ -7,8 +7,8 @@ I used this to generate the template for this project (everything in the raylib-
 
 ## Requires
 
-[Zig](https://ziglang.org/)<br/>
-[raylib](https://www.raylib.com/)
+[Zig](https://ziglang.org/) 0.8.0<br/>
+[raylib](https://www.raylib.com/) 3.0
 
 ## Setup and Build
 

@@ -59,7 +59,8 @@ fn piece_color(t: Type) Color {
     };
 }
 fn random_type(rng: *std.rand.DefaultPrng) Type {
-    const index = rng.random.uintLessThanBiased(@TagType(Type), @typeInfo(Type).Enum.fields.len);
+    const index = rng.random.uintLessThanBiased(@typeInfo(Type).Enum.tag_type,
+                                                @typeInfo(Type).Enum.fields.len);
     return @intToEnum(Type, index);
 }
 const Rotation = enum {
@@ -122,9 +123,7 @@ const Game = struct {
         }
         // rng
         var buf: [8]u8 = undefined;
-        std.crypto.randomBytes(buf[0..]) catch |err| {
-            panic("unable to seed random number generator: {}", .{err});
-        };
+        std.crypto.random.bytes(buf[0..]);
         const seed = std.mem.readIntLittle(u64, buf[0..8]);
         var r = std.rand.DefaultPrng.init(seed);
         // squares
@@ -232,9 +231,6 @@ const Game = struct {
                 if (IsKeyReleased(KeyboardKey.KEY_ESCAPE)) {
                     self.state = State.Play;
                 }
-            },
-            else => {
-                self.state = State.Play;
             },
         }
         if (self.freeze_down > 0) {
