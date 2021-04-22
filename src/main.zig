@@ -69,6 +69,31 @@ const Square = struct {
     color: Color,
     active: bool,
 };
+const Level = struct {
+    tick_rate: i32,
+    value: usize,
+
+    pub fn get_level(piece_count: usize) Level {
+        return switch (piece_count) {
+            0...10 => Level{ .value = 1, .tick_rate = 30 },
+            11...25 => Level{ .value = 2, .tick_rate = 30 },
+            26...50 => Level{ .value = 3, .tick_rate = 25 },
+            51...100 => Level{ .value = 4, .tick_rate = 25 },
+            101...150 => Level{ .value = 5, .tick_rate = 20 },
+            151...200 => Level{ .value = 6, .tick_rate = 20 },
+            201...250 => Level{ .value = 7, .tick_rate = 15 },
+            251...300 => Level{ .value = 8, .tick_rate = 15 }, // score ~100
+            301...350 => Level{ .value = 9, .tick_rate = 12 },
+            351...400 => Level{ .value = 10, .tick_rate = 12 },
+            401...450 => Level{ .value = 11, .tick_rate = 10 },
+            451...500 => Level{ .value = 12, .tick_rate = 10 },
+            501...600 => Level{ .value = 13, .tick_rate = 8 },
+            601...700 => Level{ .value = 14, .tick_rate = 8 },
+            701...800 => Level{ .value = 15, .tick_rate = 6 },
+            else => Level{ .value = 16, .tick_rate = 5 },
+        };
+    }
+};
 
 const Game = struct {
     grid: [grid_width * grid_height]Square,
@@ -85,6 +110,9 @@ const Game = struct {
     x: i32,
     y: i32,
     score: usize,
+    piece_count: usize,
+    rows_this_tick: usize,
+    level: Level,
 
     pub fn init() Game {
         // grid
@@ -118,6 +146,9 @@ const Game = struct {
             .x = 4,
             .y = 0,
             .score = 0,
+            .piece_count = 1,
+            .rows_this_tick = 0,
+            .level = Level.get_level(1),
         };
     }
     fn anykey(self: *Game) bool {
@@ -153,6 +184,7 @@ const Game = struct {
                     self.tick = 0;
                     // TODO: Add High Score screen.
                     self.score = 0;
+                    self.rows_this_tick = 0;
                     self.state = State.Play;
                 }
             },
@@ -187,10 +219,12 @@ const Game = struct {
                 if (IsKeyPressed(KeyboardKey.KEY_UP)) {
                     self.rotate();
                 }
-                if (self.tick == 30) {
+                if (self.tick >= self.level.tick_rate) {
                     _ = self.move_down();
                     self.remove_full_rows();
                     self.tick = 0;
+                    self.update_score();
+                    self.update_level();
                 }
                 self.tick += 1;
             },
@@ -212,6 +246,22 @@ const Game = struct {
         if (self.freeze_input > 0) {
             self.freeze_input -= 1;
         }
+    }
+    fn update_score(self: *Game) void {
+        const bonus: usize = switch (self.rows_this_tick) {
+            0 => 0,
+            1 => 1,
+            2 => 3,
+            3 => 5,
+            4 => 8,
+            else => 100, // shouldn't happen
+        };
+        self.score += bonus;
+        self.rows_this_tick = 0;
+    }
+    fn update_level(self: *Game) void {
+        self.level = Level.get_level(self.piece_count);
+        warn("level: {}, speed: {}\n", .{self.level.value, self.level.tick_rate});
     }
     fn row_is_full(self: Game, y: i32) bool {
         if (y >= self.grid.len or y < 0) {
@@ -266,7 +316,7 @@ const Game = struct {
         while (y > -1) {
             if (self.row_is_full(y)) {
                 while (self.row_is_full(cp_y)) {
-                    self.score += 1;
+                    self.rows_this_tick += 1;
                     cp_y -= 1;
                 }
                 self.copy_rows(cp_y, y);
@@ -328,6 +378,7 @@ const Game = struct {
         }
     }
     pub fn piece_reset(self: *Game) void {
+        self.piece_count += 1;
         self.y = 0;
         self.x = 4;
         self.t = self.next_type;

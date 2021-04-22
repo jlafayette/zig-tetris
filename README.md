@@ -28,18 +28,18 @@ I'm probably doing this wrong...
 
 ## TODO
 
-- [ ] Display controls on the start and pause screens
-- [ ] Add difficulty? maybe faster ticks, junk rows
-- [x] Add score
-- [ ] Add sound
-- [ ] Add two player coop or competition mode
-- [ ] Add screenshot or gif to README
-- [ ] Add high score
 - [ ] Level up
-- [ ] (Difficulty) Slowly reduce likelyhood of pieces that are helpful
-- [x] Change escape to pause
-- [ ] Space, Ctrl should be drop, down arrow fast down
-- [ ] Throw in large shapes! (with countdown til arrival)
-- [ ] Add AI oppenent
+- [ ] (Difficulty) faster ticks
+- [ ] Display current level
+- [x] Combo score for multiple rows
 - [ ] Flash combo scores / multipliers
+- [ ] (Difficulty) junk rows
+- [ ] Display controls on the start and pause screens
+- [ ] Add sound
+- [ ] Add high score
+- [ ] Add screenshot or gif to README
+- [ ] (Difficulty) Slowly reduce likelyhood of pieces that are helpful
+- [ ] Throw in large shapes! (with countdown til arrival)
+- [ ] Add two player coop or competition mode
+- [ ] Add AI oppenent
 - [ ] Online play
