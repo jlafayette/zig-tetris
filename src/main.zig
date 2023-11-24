@@ -1,8 +1,8 @@
-usingnamespace @import("raylib");
 const std = @import("std");
 const math = std.math;
-const warn = std.debug.warn;
+const warn = std.debug.print;
 const panic = std.debug.panic;
+const rl = @import("raylib");
 
 const grid_width: i32 = 10;
 const grid_height: i32 = 20;
@@ -12,11 +12,11 @@ const piece_preview_width = grid_cell_size * 5;
 const screen_width: i32 = (grid_width * grid_cell_size) + (margin * 2) + piece_preview_width + margin;
 const screen_height: i32 = (grid_height * grid_cell_size) + margin;
 
-fn rgb(r: u8, g: u8, b: u8) Color {
-    return Color{ .r = r, .g = g, .b = b, .a = 255 };
+fn rgb(r: u8, g: u8, b: u8) rl.Color {
+    return .{ .r = r, .g = g, .b = b, .a = 255 };
 }
-fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
-    return Color{ .r = r, .g = g, .b = b, .a = a };
+fn rgba(r: u8, g: u8, b: u8, a: u8) rl.Color {
+    return .{ .r = r, .g = g, .b = b, .a = a };
 }
 const BackgroundColor = rgb(29, 38, 57);
 const BackgroundHiLightColor = rgb(39, 48, 67);
@@ -47,7 +47,7 @@ const Type = enum {
     L,
     J,
 };
-fn piece_color(t: Type) Color {
+fn piece_color(t: Type) rl.Color {
     return switch (t) {
         Type.Cube => rgb(241, 211, 90),
         Type.Long => rgb(83, 179, 219),
@@ -59,15 +59,11 @@ fn piece_color(t: Type) Color {
     };
 }
 fn random_type(rng: *std.rand.DefaultPrng) Type {
-    const index = rng.random.uintLessThanBiased(@typeInfo(Type).Enum.tag_type,
-                                                @typeInfo(Type).Enum.fields.len);
-    return @intToEnum(Type, index);
+    return rng.random().enumValue(Type);
 }
-const Rotation = enum {
-    A, B, C, D
-};
+const Rotation = enum { A, B, C, D };
 const Square = struct {
-    color: Color,
+    color: rl.Color,
     active: bool,
 };
 const Level = struct {
@@ -118,8 +114,9 @@ const Game = struct {
     pub fn init() Game {
         // grid
         var grid: [grid_width * grid_height]Square = undefined;
-        for (grid) |*item, i| {
-            item.* = Square{ .color = WHITE, .active = false };
+        for (&grid, 0..) |*item, i| {
+            _ = i;
+            item.* = Square{ .color = rl.Color.white, .active = false };
         }
         // rng
         var buf: [8]u8 = undefined;
@@ -151,17 +148,18 @@ const Game = struct {
         };
     }
     fn anykey(self: *Game) bool {
-        const k = GetKeyPressed();
-        if (k != @enumToInt(KeyboardKey.KEY_NULL)) {
+        _ = self;
+        const k = rl.getKeyPressed();
+        if (k != rl.KeyboardKey.key_null) {
             return true;
         } else {
             // Seems like some keys don't register with GetKeyPressed, so
             // checking for them manually here.
-            if (IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                IsKeyReleased(KeyboardKey.KEY_LEFT) or
-                IsKeyReleased(KeyboardKey.KEY_RIGHT) or
-                IsKeyReleased(KeyboardKey.KEY_DOWN) or
-                IsKeyReleased(KeyboardKey.KEY_ENTER))
+            if (rl.isKeyReleased(rl.KeyboardKey.key_down) or
+                rl.isKeyReleased(rl.KeyboardKey.key_left) or
+                rl.isKeyReleased(rl.KeyboardKey.key_right) or
+                rl.isKeyReleased(rl.KeyboardKey.key_down) or
+                rl.isKeyReleased(rl.KeyboardKey.key_enter))
             {
                 return true;
             }
@@ -188,17 +186,17 @@ const Game = struct {
                 }
             },
             State.Play => {
-                if (IsKeyReleased(KeyboardKey.KEY_ESCAPE)) {
+                if (rl.isKeyReleased(rl.KeyboardKey.key_escape)) {
                     self.state = State.Pause;
                     return;
                 }
-                if (IsKeyPressed(KeyboardKey.KEY_RIGHT)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_right)) {
                     self.move_right();
                 }
-                if (IsKeyPressed(KeyboardKey.KEY_LEFT)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_left)) {
                     self.move_left();
                 }
-                if (IsKeyDown(KeyboardKey.KEY_DOWN)) {
+                if (rl.isKeyDown(rl.KeyboardKey.key_down)) {
                     if (self.freeze_down <= 0) {
                         const moved = self.move_down();
                         if (!moved) {
@@ -206,16 +204,16 @@ const Game = struct {
                         }
                     }
                 }
-                if (IsKeyReleased(KeyboardKey.KEY_DOWN)) {
+                if (rl.isKeyReleased(rl.KeyboardKey.key_down)) {
                     self.freeze_down = 0;
                 }
-                if (IsKeyPressed(KeyboardKey.KEY_RIGHT_CONTROL) or IsKeyPressed(KeyboardKey.KEY_SPACE)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_right_control) or rl.isKeyPressed(rl.KeyboardKey.key_space)) {
                     const moved = self.drop();
                     if (!moved) {
                         self.freeze_down = 60;
                     }
                 }
-                if (IsKeyPressed(KeyboardKey.KEY_UP)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_up)) {
                     self.rotate();
                 }
                 if (self.tick >= self.level.tick_rate) {
@@ -228,7 +226,7 @@ const Game = struct {
                 self.tick += 1;
             },
             State.Pause => {
-                if (IsKeyReleased(KeyboardKey.KEY_ESCAPE)) {
+                if (rl.isKeyReleased(rl.KeyboardKey.key_escape)) {
                     self.state = State.Play;
                 }
             },
@@ -257,7 +255,7 @@ const Game = struct {
     }
     fn update_level(self: *Game) void {
         self.level = Level.get_level(self.piece_count);
-        warn("level: {}, speed: {}\n", .{self.level.value, self.level.tick_rate});
+        warn("level: {}, speed: {}\n", .{ self.level.value, self.level.tick_rate });
     }
     fn row_is_full(self: Game, y: i32) bool {
         if (y >= self.grid.len or y < 0) {
@@ -284,7 +282,7 @@ const Game = struct {
         while (x < grid_width) : (x += 1) {
             if (y1 < 0) {
                 self.set_active_state(x, y2, false);
-                self.set_grid_color(x, y2, WHITE);
+                self.set_grid_color(x, y2, rl.Color.white);
             } else {
                 self.set_active_state(x, y2, self.get_active(x, y1));
                 self.set_grid_color(x, y2, self.get_grid_color(x, y1));
@@ -329,22 +327,22 @@ const Game = struct {
         if (y < 0) {
             return false;
         }
-        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        const index: usize = @as(usize, @intCast(y)) * @as(usize, @intCast(grid_width)) + @as(usize, @intCast(x));
         if (index >= self.grid.len) {
             return true;
         }
         return self.grid[index].active;
     }
-    pub fn get_grid_color(self: Game, x: i32, y: i32) Color {
+    pub fn get_grid_color(self: Game, x: i32, y: i32) rl.Color {
         if (x < 0) {
-            return LIGHTGRAY;
+            return rl.Color.light_gray;
         }
         if (y < 0) {
-            return WHITE;
+            return rl.Color.white;
         }
-        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        const index: usize = @as(usize, @intCast(y)) * @as(usize, @intCast(grid_width)) + @as(usize, @intCast(x));
         if (index >= self.grid.len) {
-            return LIGHTGRAY;
+            return rl.Color.light_gray;
         }
         return self.grid[index].color;
     }
@@ -352,25 +350,26 @@ const Game = struct {
         if (x < 0 or y < 0) {
             return;
         }
-        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        const index: usize = @as(usize, @intCast(y)) * @as(usize, @intCast(grid_width)) + @as(usize, @intCast(x));
         if (index >= self.grid.len) {
             return;
         }
         self.grid[index].active = state;
     }
-    fn set_grid_color(self: *Game, x: i32, y: i32, color: Color) void {
+    fn set_grid_color(self: *Game, x: i32, y: i32, color: rl.Color) void {
         if (x < 0 or y < 0) {
             return;
         }
-        const index: usize = @intCast(usize, y) * @intCast(usize, grid_width) + @intCast(usize, x);
+        const index: usize = @as(usize, @intCast(y)) * @as(usize, @intCast(grid_width)) + @as(usize, @intCast(x));
         if (index >= self.grid.len) {
             return;
         }
         self.grid[index].color = color;
     }
     pub fn reset(self: *Game) void {
-        for (self.grid) |*item, i| {
-            item.* = Square{ .color = WHITE, .active = false };
+        for (&self.grid, 0..) |*item, i| {
+            _ = i;
+            item.* = Square{ .color = rl.Color.white, .active = false };
         }
     }
     pub fn piece_reset(self: *Game) void {
@@ -386,7 +385,7 @@ const Game = struct {
             self.freeze_input = 60; // Keep player from mashing keys at end and skipping the game over screen.
         }
     }
-    fn piece_shade(self: *Game) Color {
+    fn piece_shade(self: *Game) rl.Color {
         return switch (self.t) {
             Type.Cube => rgb(241, 211, 90),
             Type.Long => rgb(83, 179, 219),
@@ -397,7 +396,7 @@ const Game = struct {
             Type.Z => rgb(233, 154, 56),
         };
     }
-    fn piece_ghost(self: *Game) Color {
+    fn piece_ghost(self: *Game) rl.Color {
         return switch (self.t) {
             Type.Cube => rgba(241, 211, 90, 175),
             Type.Long => rgba(83, 179, 219, 175),
@@ -409,7 +408,7 @@ const Game = struct {
         };
     }
     pub fn draw(self: *Game) void {
-        ClearBackground(BorderColor);
+        rl.clearBackground(BorderColor);
         var y: i32 = 0;
         var upper_left_y: i32 = 0;
         while (y < grid_height) {
@@ -417,10 +416,10 @@ const Game = struct {
             var upper_left_x: i32 = margin;
             while (x < grid_width) {
                 if (self.get_active(x, y)) {
-                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
+                    rl.drawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, self.get_grid_color(x, y));
                 } else {
-                    DrawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, BackgroundHiLightColor);
-                    DrawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
+                    rl.drawRectangle(upper_left_x, upper_left_y, grid_cell_size, grid_cell_size, BackgroundHiLightColor);
+                    rl.drawRectangle(upper_left_x + 1, upper_left_y + 1, grid_cell_size - 2, grid_cell_size - 2, BackgroundColor);
                 }
 
                 upper_left_x += grid_cell_size;
@@ -435,25 +434,25 @@ const Game = struct {
             const ghost_square_offset = self.get_ghost_square_offset();
             for (self.squares) |pos| {
                 // Draw ghost
-                DrawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + ghost_square_offset + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, self.piece_ghost());
+                rl.drawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + ghost_square_offset + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, self.piece_ghost());
                 // Draw shape
-                DrawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, piece_color(self.t));
+                rl.drawRectangle((self.x + pos.x) * grid_cell_size + margin, (self.y + pos.y) * grid_cell_size, grid_cell_size, grid_cell_size, piece_color(self.t));
             }
         }
 
         const right_bar = margin + (10 * grid_cell_size) + margin;
         var draw_height = margin; // Track where to start drawing the next item
         // Draw score
-        DrawText("Score:", right_bar, draw_height, 20, LIGHTGRAY);
+        rl.drawText("Score:", right_bar, draw_height, 20, rl.Color.light_gray);
         draw_height += 20;
-        var score_text_buf = [_]u8{0} ** 20;
-        const score_text = std.fmt.bufPrint(score_text_buf[0..], "{}", .{self.score}) catch unreachable;
-        DrawText(@ptrCast([*c]const u8, score_text[0..1]), right_bar, draw_height, 20, LIGHTGRAY);
+        var score_text_buf = [_]u8{0} ** 21; // 20 for max usize + 1 for null byte
+        const score_text = std.fmt.bufPrintZ(score_text_buf[0..], "{}", .{self.score}) catch unreachable;
+        rl.drawText(score_text, right_bar, draw_height, 20, rl.Color.light_gray);
         draw_height += 20;
 
         // Draw next piece
         draw_height += margin;
-        DrawRectangle(right_bar, draw_height, piece_preview_width, piece_preview_width, BackgroundColor);
+        rl.drawRectangle(right_bar, draw_height, piece_preview_width, piece_preview_width, BackgroundColor);
         if (self.state != State.StartScreen) {
             const next_squares = switch (self.next_type) {
                 Type.Long => Game.get_squares(self.next_type, Rotation.B),
@@ -464,10 +463,10 @@ const Game = struct {
             var max_y: i32 = 0;
             var min_y: i32 = 0;
             for (next_squares) |pos| {
-                min_x = math.min(min_x, pos.x);
-                max_x = math.max(max_x, pos.x);
-                min_y = math.min(min_y, pos.y);
-                max_y = math.max(max_y, pos.y);
+                min_x = @min(min_x, pos.x);
+                max_x = @max(max_x, pos.x);
+                min_y = @min(min_y, pos.y);
+                max_y = @max(max_y, pos.y);
             }
             const height = (max_y - min_y + 1) * grid_cell_size;
             const width = (max_x - min_x + 1) * grid_cell_size;
@@ -477,27 +476,27 @@ const Game = struct {
             const x_pixel_offset = @divFloor(piece_preview_width - width, 2);
             const y_pixel_offset = @divFloor(piece_preview_width - height, 2);
             for (next_squares) |pos| {
-                DrawRectangle(right_bar + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size), draw_height + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size), grid_cell_size, grid_cell_size, piece_color(self.next_type));
+                rl.drawRectangle(right_bar + x_pixel_offset + ((pos.x + x_offset) * grid_cell_size), draw_height + y_pixel_offset + ((pos.y + y_offset) * grid_cell_size), grid_cell_size, grid_cell_size, piece_color(self.next_type));
             }
         }
         draw_height += piece_preview_width;
 
         if (self.state == State.Pause or self.state == State.GameOver or self.state == State.StartScreen) {
             // Partially transparent background to give text better contrast if drawn over the grid
-            DrawRectangle(0, (screen_height / 2) - 70, screen_width, 110, rgba(3, 2, 1, 100));
+            rl.drawRectangle(0, (screen_height / 2) - 70, screen_width, 110, rgba(3, 2, 1, 100));
         }
 
         if (self.state == State.Pause) {
-            DrawText("PAUSED", 75, screen_height / 2 - 50, 50, WHITE);
-            DrawText("Press ESCAPE to unpause", 45, screen_height / 2, 20, LIGHTGRAY);
+            rl.drawText("PAUSED", 75, screen_height / 2 - 50, 50, rl.Color.white);
+            rl.drawText("Press ESCAPE to unpause", 45, screen_height / 2, 20, rl.Color.light_gray);
         }
         if (self.state == State.GameOver) {
-            DrawText("GAME OVER", 45, screen_height / 2 - 50, 42, WHITE);
-            DrawText("Press any key to continue", 41, screen_height / 2, 20, LIGHTGRAY);
+            rl.drawText("GAME OVER", 45, screen_height / 2 - 50, 42, rl.Color.white);
+            rl.drawText("Press any key to continue", 41, screen_height / 2, 20, rl.Color.light_gray);
         }
         if (self.state == State.StartScreen) {
-            DrawText("TETRIS", 75, screen_height / 2 - 50, 50, WHITE);
-            DrawText("Press any key to continue", 41, screen_height / 2, 20, LIGHTGRAY);
+            rl.drawText("TETRIS", 75, screen_height / 2 - 50, 50, rl.Color.white);
+            rl.drawText("Press any key to continue", 41, screen_height / 2, 20, rl.Color.light_gray);
         }
     }
     pub fn get_squares(t: Type, r: Rotation) [4]Pos {
@@ -705,24 +704,24 @@ const Game = struct {
 pub fn main() anyerror!void {
     // Initialization
     var game = Game.init();
-    InitWindow(screen_width, screen_height, "Tetris");
-    defer CloseWindow();
+    rl.initWindow(screen_width, screen_height, "Tetris");
+    defer rl.closeWindow();
 
     // Default is Escape, but we want to use that for pause instead
-    SetExitKey(KeyboardKey.KEY_F4);
+    rl.setExitKey(rl.KeyboardKey.key_f4);
 
     // Set the game to run at 60 frames-per-second
-    SetTargetFPS(60);
+    rl.setTargetFPS(60);
 
     // Solves blurry font on high resolution displays
-    SetTextureFilter(GetFontDefault().texture, @enumToInt(TextureFilterMode.FILTER_POINT));
+    rl.setTextureFilter(rl.getFontDefault().texture, @intFromEnum(rl.TextureFilter.texture_filter_point));
 
     // Main game loop
-    while (!WindowShouldClose()) // Detect window close button or ESC key
-        {
+    while (!rl.windowShouldClose()) // Detect window close button or ESC key
+    {
         game.update();
-        BeginDrawing();
+        rl.beginDrawing();
         game.draw();
-        EndDrawing();
+        rl.endDrawing();
     }
 }
