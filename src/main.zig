@@ -114,8 +114,7 @@ const Game = struct {
     pub fn init() Game {
         // grid
         var grid: [grid_width * grid_height]Square = undefined;
-        for (&grid, 0..) |*item, i| {
-            _ = i;
+        for (&grid) |*item| {
             item.* = Square{ .color = rl.Color.white, .active = false };
         }
         // rng
@@ -368,8 +367,7 @@ const Game = struct {
     }
     pub fn reset(self: *Game) void {
         self.piece_count = 0;
-        for (&self.grid, 0..) |*item, i| {
-            _ = i;
+        for (&self.grid) |*item| {
             item.* = Square{ .color = rl.Color.white, .active = false };
         }
     }
