@@ -19,11 +19,7 @@ the build.zig, and build.zig.zon file).
 
 ## TODO
 
-- [ ] Reset difficulty when starting a new game
-- [ ] Level up
-- [ ] (Difficulty) faster ticks
 - [ ] Display current level
-- [x] Combo score for multiple rows
 - [ ] Flash combo scores / multipliers
 - [ ] (Difficulty) junk rows
 - [ ] Display controls on the start and pause screens

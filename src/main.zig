@@ -367,6 +367,7 @@ const Game = struct {
         self.grid[index].color = color;
     }
     pub fn reset(self: *Game) void {
+        self.piece_count = 0;
         for (&self.grid, 0..) |*item, i| {
             _ = i;
             item.* = Square{ .color = rl.Color.white, .active = false };
