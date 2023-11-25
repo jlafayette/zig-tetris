@@ -13,20 +13,8 @@ the build.zig, and build.zig.zon file).
 
 ## Setup and Build
 
-### MacOS
-
-TODO: update this once it's tested with the new version to confirm that it still works
-
-- Install raylib: `brew install raylib`
-- Then it just works: `zig build run`
-
-### Windows
-
-TODO: update this once it's tested on Windows
-
-- Download raylib installer
-- Navigate to `C:\raylib\raylib\projects\VS2017` and build the solution in Visual Studio Code
-- Currently this build directory is hardcoded in build.zig:<br/>`C:/raylib/raylib/projects/VS2017/bin/x64/Release.DLL`
+- `git submodule init`
+- `git submodule update`
 - `zig build run`
 
 ## TODO
