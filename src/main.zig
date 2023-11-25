@@ -1,6 +1,6 @@
 const std = @import("std");
 const math = std.math;
-const warn = std.debug.print;
+const print = std.debug.print;
 const panic = std.debug.panic;
 const rl = @import("raylib");
 
@@ -253,12 +253,15 @@ const Game = struct {
         self.rows_this_tick = 0;
     }
     fn update_level(self: *Game) void {
+        const previous_level = self.level;
         self.level = Level.get_level(self.piece_count);
-        warn("level: {}, speed: {}\n", .{ self.level.value, self.level.tick_rate });
+        if (self.level.value != previous_level.value) {
+            print("level: {}, speed: {}\n", .{ self.level.value, self.level.tick_rate });
+        }
     }
     fn row_is_full(self: Game, y: i32) bool {
         if (y >= self.grid.len or y < 0) {
-            warn("Row index out of bounds {}", .{y});
+            print("Row index out of bounds {}", .{y});
             return false;
         }
         var x: i32 = 0;
@@ -270,11 +273,11 @@ const Game = struct {
     }
     fn copy_row(self: *Game, y1: i32, y2: i32) void {
         if (y1 == y2) {
-            warn("Invalid copy, {} must not equal {}\n", .{ y1, y2 });
+            print("Invalid copy, {} must not equal {}\n", .{ y1, y2 });
             return;
         }
         if (y2 < 0 or y1 >= grid_height or y2 >= grid_height) {
-            warn("Invalid copy, {} or {} is out of bounds\n", .{ y1, y2 });
+            print("Invalid copy, {} or {} is out of bounds\n", .{ y1, y2 });
             return;
         }
         var x: i32 = 0;
@@ -291,7 +294,7 @@ const Game = struct {
     fn copy_rows(self: *Game, src_y: i32, dst_y: i32) void {
         // Starting at dest row, copy everything above, but starting at dest
         if (src_y >= dst_y) {
-            warn("{} must be less than {}\n", .{ src_y, dst_y });
+            print("{} must be less than {}\n", .{ src_y, dst_y });
             return;
         }
         var y1: i32 = src_y;
