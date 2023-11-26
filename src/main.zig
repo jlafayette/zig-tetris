@@ -189,13 +189,13 @@ const Game = struct {
                     self.state = State.Pause;
                     return;
                 }
-                if (rl.isKeyPressed(rl.KeyboardKey.key_right)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_right) or rl.isKeyPressed(rl.KeyboardKey.key_d)) {
                     self.move_right();
                 }
-                if (rl.isKeyPressed(rl.KeyboardKey.key_left)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_left) or rl.isKeyPressed(rl.KeyboardKey.key_a)) {
                     self.move_left();
                 }
-                if (rl.isKeyDown(rl.KeyboardKey.key_down)) {
+                if (rl.isKeyDown(rl.KeyboardKey.key_down) or rl.isKeyPressed(rl.KeyboardKey.key_s)) {
                     if (self.freeze_down <= 0) {
                         const moved = self.move_down();
                         if (!moved) {
@@ -203,7 +203,7 @@ const Game = struct {
                         }
                     }
                 }
-                if (rl.isKeyReleased(rl.KeyboardKey.key_down)) {
+                if (rl.isKeyReleased(rl.KeyboardKey.key_down) or rl.isKeyReleased(rl.KeyboardKey.key_s)) {
                     self.freeze_down = 0;
                 }
                 if (rl.isKeyPressed(rl.KeyboardKey.key_right_control) or rl.isKeyPressed(rl.KeyboardKey.key_space)) {
@@ -212,7 +212,7 @@ const Game = struct {
                         self.freeze_down = 60;
                     }
                 }
-                if (rl.isKeyPressed(rl.KeyboardKey.key_up)) {
+                if (rl.isKeyPressed(rl.KeyboardKey.key_up) or rl.isKeyPressed(rl.KeyboardKey.key_w)) {
                     self.rotate();
                 }
                 if (self.tick >= self.level.tick_rate) {
